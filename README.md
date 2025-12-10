@@ -70,7 +70,7 @@ Tools to add:
     - [ ] match / match allocate
     - [ ] cancel
     - [ ] satisfy
-   - [ ] delegation
+   - flux-core
    - [ ] submit jobs
    - [ ] job info
    - [ ] cancel job
@@ -80,6 +80,9 @@ Tools to add:
      - [x] canonical jobspec
      - [x] json jobspec
    - [ ] topology?
+   - delegation
+    - [x] local flux URI
+    - [ ] kubernetes
    - [ ] batch job generation
    - [ ] jobspec generation
    - [ ] translation (the transformers?)
