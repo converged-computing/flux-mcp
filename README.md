@@ -52,6 +52,10 @@ In another terminal, run the test. You'll need to `pip install pytest pytest-asy
 
 ```bash
 pytest -xs tests/test_flux_validate.py
+pytest -xs tests/test_flux_counts.py
+
+# or
+pytest -xs tests/test_*.py
 ```
 
 ### Tools
@@ -71,7 +75,7 @@ Tools to add:
    - [ ] job info
    - [ ] cancel job
    - [x] validator
-     - [ ] counter
+     - [x] counter
      - [x] batch jobs
      - [x] canonical jobspec
      - [x] json jobspec

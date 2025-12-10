@@ -41,19 +41,24 @@ def flux_validate_jobspec(content: Annotated[str, "Loaded jobspec"]):
     return {"jobspec": jobspec, "errors": errors, "valid": not errors}
 
 
-def flux_count_jobspec_resources(path: Annotated[str, "Path to jobspec"]):
+def flux_count_jobspec_resources(content: Annotated[str, "String value of jobspec"]):
     """
     Count job resources. This also assumes.
     """
-    jobspec = flux_validate_jobspec(path)
+    result = flux_validate_jobspec(content)
+    if not result["valid"]:
+        return {}
+    jobspec = result["jobspec"]
+    counts = {}
     if jobspec is not None:
         print(
             "The jobspec is valid! Here are the total resource"
             " counts per type requested by the provided jobspec:"
         )
-        for res in jobspec[1].resource_walk():
+        for res in jobspec.resource_walk():
             print(f"Type: {res[1]['type']}, count: {res[2]}")
-    pass
+            counts[res[1]["type"]] = res[2]
+    return counts
 
 
 def display_error(content, issue):
