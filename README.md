@@ -53,6 +53,8 @@ In another terminal, run the test. You'll need to `pip install pytest pytest-asy
 ```bash
 pytest -xs tests/test_flux_validate.py
 pytest -xs tests/test_flux_counts.py
+pytest -xs tests/test_flux_job_delegation.py
+pytest -xs tests/test_flux_job_core.py
 
 # or
 pytest -xs tests/test_*.py
@@ -71,9 +73,9 @@ Tools to add:
     - [ ] cancel
     - [ ] satisfy
    - flux-core
-   - [ ] submit jobs
-   - [ ] job info
-   - [ ] cancel job
+   - [x] submit jobs
+   - [x] job info
+   - [x] cancel job
    - [x] validator
      - [x] counter
      - [x] batch jobs

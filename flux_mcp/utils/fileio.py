@@ -61,7 +61,7 @@ def load_jobspec(filename):
     # It is already loaded!
     if isinstance(filename, dict):
         return filename
-    if isinstance(filename, str):
+    if isinstance(filename, str) and not os.path.exists(filename):
         return yaml.safe_load(filename)
     try:
         return read_yaml(filename)
