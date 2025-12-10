@@ -4,6 +4,8 @@
 
 [![PyPI version](https://badge.fury.io/py/flux-mcp.svg)](https://badge.fury.io/py/flux-mcp)
 
+![img/flux-mcp-small.png](img/flux-mcp-small.png)
+
 ## Usage
 
 These Flux MCP tools can be used via a standalone server, or combined with other tools.
@@ -57,26 +59,26 @@ pytest -xs tests/test_flux_validate.py
 Tools to add:
 
  - flux
-   - [] flux-sched
-    - [] grow
-    - [] shrink
-    - [] create resource graph
-    - [] match / match allocate
-    - [] cancel
-    - [] satisfy
-   - [] delegation
-   - [] submit jobs
-   - [] job info
-   - [] cancel job
+   - [ ] flux-sched
+    - [ ] grow
+    - [ ] shrink
+    - [ ] create resource graph
+    - [ ] match / match allocate
+    - [ ] cancel
+    - [ ] satisfy
+   - [ ] delegation
+   - [ ] submit jobs
+   - [ ] job info
+   - [ ] cancel job
    - [x] validator
-     - [] counter
+     - [ ] counter
      - [x] batch jobs
      - [x] canonical jobspec
      - [x] json jobspec
-   - [] topology?
-   - [] batch job generation
-   - [] jobspec generation
-   - [] translation (the transformers?)
+   - [ ] topology?
+   - [ ] batch job generation
+   - [ ] jobspec generation
+   - [ ] translation (the transformers?)
 
 
 ## License
