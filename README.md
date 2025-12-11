@@ -55,6 +55,7 @@ pytest -xs tests/test_flux_validate.py
 pytest -xs tests/test_flux_counts.py
 pytest -xs tests/test_flux_job_delegation.py
 pytest -xs tests/test_flux_job_core.py
+pytest -xs tests/test_transformers.py
 
 # or
 pytest -xs tests/test_*.py
@@ -85,10 +86,12 @@ Tools to add:
    - delegation
     - [x] local flux URI
     - [ ] kubernetes
-   - [ ] batch job generation
-   - [ ] jobspec generation
-   - [ ] translation (the transformers?)
+   - [x] translation (the transformers?)
 
+
+## TODO
+
+- Add annotated descriptions to all functions for LLM.
 
 ## License
 

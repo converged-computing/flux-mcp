@@ -117,6 +117,57 @@ class Validator(BatchCmd):
             if value != getattr(defaults, key):
                 yield key, value
 
+    def parse(self, filename, return_unhandled=False, fail_fast=True):
+        """
+        Validate and parse, yielding back arguments.
+        """
+        content = utils.read_file(filename)
+        not_handled = set()
+
+        # Changes are removed lines to get it to read
+        batchscript, changes = self.get_directive_parser(content)
+        if changes:
+            changes = "\n".join(changes)
+            raise ValueError(f"Batch Job is invalid, required changes: {changes}")
+
+        # Assume the script is not hashbang, command or directive
+        script = [x for x in batchscript.script.split("\n") if not x.startswith("#") and x.strip()]
+
+        # We will populate the common JobSpec
+        # (circular import here)
+        from flux_mcp.transformer.common import JobSpec
+
+        js = JobSpec(arguments=script)
+
+        # Not parsed yet in flux:
+        #   1. input_file (Not sure what this is)
+        #   2. I don't think flux has memory per slot
+        #   3. I know flux has constraints, add parsed here
+        errors = []
+        for item in batchscript.directives:
+            try:
+                # Validation, then mapping to standard
+                if item.action == "SETARGS":
+                    # This should only be one value, but don't assume
+                    for key, value in self.parse_argument_delta(item.args):
+                        js, _ = self.update_jobspec(js, key, value, not_handled)
+
+            except Exception:
+                name = " ".join(item.args)
+                if fail_fast:
+                    raise ValueError(f"validation failed at directive '{name}' line {item.lineno}")
+                else:
+                    errors.append(f"  #FLUX: {name}")
+
+        # Return ALL errors at once
+        if not fail_fast and errors:
+            errors = "\n".join(errors)
+            raise ValueError(f"Validation failed at directives:\n{errors}")
+
+        if return_unhandled:
+            return not_handled
+        return js
+
 
 def parse_time_to_seconds(time_str):
     """
