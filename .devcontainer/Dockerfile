@@ -17,5 +17,15 @@ RUN groupadd -g ${USER_GID} ${USERNAME} && \
     adduser --disabled-password --uid ${USER_UID} --gid ${USER_GID} --gecos "" ${USERNAME} && \
     echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers
 
+# Install flux-sched python bindings
+RUN python3 -m pip install Cython setuptools && git clone https://github.com/flux-framework/flux-sched /tmp/flux-sched && \
+    git clone https://github.com/flux-framework/flux-sched-py /tmp/flux-sched-py && \
+    mv /tmp/flux-sched-py/ /tmp/flux-sched/resource/reapi/bindings/python && \
+    cd /tmp/flux-sched && \
+    ./configure --prefix=/usr && make && make install && \
+    cd /tmp/flux-sched/resource/reapi/bindings/python && \
+    python3 setup.py sdist bdist_wheel && \
+    pip install dist/flux_sched-0.0.0*.whl
+
 ENV PYTHONPATH="/usr/lib/flux/python3.12/"
 USER $USERNAME

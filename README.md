@@ -48,6 +48,13 @@ I will add tools to git as I write tests for them. To test, start the fastmcp se
 python3 -m flux_mcp.server.fastmcp
 ```
 
+To test flux-sched, ensure `libreapi_cli.so` is on the `LD_LIBRARY_PATH` of the server:
+
+```bash
+export LD_LIBRARY_PATH=/usr/lib/flux/
+python3 -m flux_mcp.server.fastmcp
+```
+
 In another terminal, run the test. You'll need to `pip install pytest pytest-asyncio`
 
 ```bash
@@ -56,6 +63,9 @@ pytest -xs tests/test_flux_counts.py
 pytest -xs tests/test_flux_job_delegation.py
 pytest -xs tests/test_flux_job_core.py
 pytest -xs tests/test_transformers.py
+
+# Requires libreapi_cli.so
+pytest -xs tests/test_flux_sched.py
 
 # or
 pytest -xs tests/test_*.py
@@ -69,9 +79,10 @@ Tools to add:
    - [ ] flux-sched
     - [ ] grow
     - [ ] shrink
-    - [ ] create resource graph
-    - [ ] match / match allocate
-    - [ ] cancel
+    - [x] create resource graph
+    - [x] match allocate
+    - [x] cancel
+    - [x] partial-cancel
     - [ ] satisfy
    - flux-core
    - [x] submit jobs
@@ -85,9 +96,10 @@ Tools to add:
    - [ ] topology?
    - delegation
     - [x] local flux URI
-    - [ ] kubernetes
    - [x] translation (the transformers?)
 
+Belongs in fractale-mcp
+  - [ ] kubernetes submit (apply)
 
 ## TODO
 
