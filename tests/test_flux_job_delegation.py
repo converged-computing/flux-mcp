@@ -27,7 +27,7 @@ async def test_delegation_to_local_instance(client, valid_json_jobspec):
     # 3. Call the MCP Tool
     # We assume the tool is registered with the name "handle_delegation"
     result = await client.call_tool(
-        "handle_delegation",
+        "flux_handle_delegation",
         {"jobid": dummy_source_jobid, "remote_uri": local_uri, "jobspec_str": valid_json_jobspec},
     )
 

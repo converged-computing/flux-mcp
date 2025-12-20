@@ -8,7 +8,7 @@ TOOLS = [
     validate.flux_validate_jobspec,
     validate.flux_count_jobspec_resources,
     # Job functions
-    job.handle_delegation,
+    job.flux_handle_delegation,
     transform.transform_jobspec,
     # Job core
     job.flux_submit_job,

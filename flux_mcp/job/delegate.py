@@ -8,7 +8,7 @@ import flux
 import flux.job
 
 
-def handle_delegation(jobid, remote_uri, jobspec_str):
+def flux_handle_delegation(jobid, remote_uri, jobspec_str):
     """
     Performs only the remote job submission.
     Returns the remote job ID on success, or -1 on failure.
