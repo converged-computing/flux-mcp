@@ -10,6 +10,7 @@ TOOLS = [
     # Job functions
     job.flux_handle_delegation,
     transform.transform_jobspec,
+    transform.transform_jobspec_prompt,
     # Job core
     job.flux_submit_job,
     job.flux_cancel_job,
