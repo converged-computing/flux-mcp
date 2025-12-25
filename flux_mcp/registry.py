@@ -7,10 +7,11 @@ TOOLS = [
     # Validation and counting
     validate.flux_validate_jobspec,
     validate.flux_count_jobspec_resources,
+    validate.flux_validate_jobspec_persona,
     # Job functions
     job.flux_handle_delegation,
     transform.transform_jobspec,
-    transform.transform_jobspec_prompt,
+    transform.transform_jobspec_persona,
     # Job core
     job.flux_submit_job,
     job.flux_cancel_job,

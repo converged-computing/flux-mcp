@@ -1,14 +1,6 @@
-def format_rules(rules):
-    return "\n".join([f"- {r}" for r in rules])
-
-
 PERSONA = "You are a job specification generation expert."
 
 CONTEXT = "We need to convert between workload manager job specification formats."
-
-REQUIRES = [
-    "You MUST preserve as many options as possible from the original.",
-]
 
 
 def get_transform_text(script, to_manager, from_manager, fmt="batch"):
@@ -28,6 +20,7 @@ The desired output format is a '{fmt}' script.
 
 ### REQUIREMENTS & CONSTRAINTS
 You MUST not make up directives that do not exist.
+You MUST preserve as many options as possible from the original.
 
 ### INSTRUCTIONS
 1. Analyze the provided script below.

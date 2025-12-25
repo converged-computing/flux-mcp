@@ -5,7 +5,7 @@ import flux_mcp.transformer.prompts as prompts
 from .registry import detect_transformer, get_transformer
 
 
-def transform_jobspec_prompt(script: str, from_manager: str, to_manager: str, fmt: str = "batch"):
+def transform_jobspec_persona(script: str, from_manager: str, to_manager: str, fmt: str = "batch"):
     """
     Generate a prompt to transform FROM a particular workload manager TO a particular workload manager.
     A 'fmt' should be the jobspec format, where jobspec is the refererring to the Flux canonical JSON/YAML
@@ -25,6 +25,9 @@ def transform_jobspec_prompt(script: str, from_manager: str, to_manager: str, fm
 def transform_jobspec(batch_job: str, to_format: str, from_format: Optional[str] = None):
     """
     Convert a batch jobspec from one format to another
+
+    TODO: if we use for testing, we need to preserve batch script below
+    directives. Right now we just parse directives.
     """
 
     # If no from transformer defined, try to detect
