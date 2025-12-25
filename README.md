@@ -6,6 +6,11 @@
 
 ![img/flux-mcp-small.png](img/flux-mcp-small.png)
 
+## Related Projects
+
+- [fractale-mcp](https://github.com/compspec/fractale-mcp): (fractale) MCP orchestration (agents, databases, ui interfaces).
+- [hpc-mcp](https://github.com/converged-computing/hpc-mcp): HPC tools for a larger set of HPC and converged computing use cases.
+
 ## Usage
 
 These Flux MCP tools can be used via a standalone server, or combined with other tools.
@@ -76,30 +81,27 @@ pytest -xs tests/test_*.py
 Tools to add:
 
  - flux
-   - [ ] flux-sched
-    - [ ] grow
-    - [ ] shrink
-    - [x] create resource graph
-    - [x] match allocate
-    - [x] cancel
-    - [x] partial-cancel
-    - [ ] satisfy
+   - flux-sched
+     - [ ] grow
+     - [ ] shrink
+     - [x] create resource graph
+     - [x] match allocate
+     - [x] cancel
+     - [x] partial-cancel
+     - [ ] satisfy
    - flux-core
-   - [x] submit jobs
-   - [x] job info
-   - [x] cancel job
-   - [x] validator
-     - [x] counter
-     - [x] batch jobs
-     - [x] canonical jobspec
-     - [x] json jobspec
+     - [x] submit jobs
+     - [x] job info
+     - [x] cancel job
+     - [x] validator
+       - [x] counter
+       - [x] batch jobs
+       - [x] canonical jobspec
+       - [x] json jobspec
    - [ ] topology?
    - delegation
     - [x] local flux URI
-   - [x] translation (the transformers?)
-
-Belongs in fractale-mcp
-  - [ ] kubernetes submit (apply)
+    - [x] translation (the transformers?)
 
 ## TODO
 

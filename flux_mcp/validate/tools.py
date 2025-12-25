@@ -1,13 +1,22 @@
 import json
-import sys
 from typing import Annotated
 
 import yaml
 from flux.job.Jobspec import validate_jobspec
 from rich.console import Console
 
+import flux_mcp.validate.prompts as prompts
+
 # This will pretty print all exceptions in rich
 from flux_mcp.validate.validate import Validator
+
+
+def flux_validate_jobspec_persona(script: Annotated[str, "Batch script or job specification"]):
+    """
+    Get a prompt to encourage validation of a job specification.
+    """
+    prompt_text = prompts.get_validation_text(script)
+    return {"messages": [{"role": "user", "content": {"type": "text", "text": prompt_text}}]}
 
 
 def flux_validate_jobspec(content: Annotated[str, "Loaded jobspec"]):
