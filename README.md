@@ -30,6 +30,11 @@ You will need fastapi and fastmcp installed.
 pip install fastmcp fastapi
 ```
 
+To install in the Development environment:
+
+```bash
+```
+
 To start the demo server:
 
 ```bash
