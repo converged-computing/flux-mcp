@@ -1,2 +1,2 @@
-from .core import flux_cancel_job, flux_get_job_info, flux_submit_job
+from .core import flux_cancel_job, flux_get_job_info, flux_get_job_logs, flux_submit_job
 from .delegate import flux_handle_delegation  # noqa

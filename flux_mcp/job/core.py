@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Optional, Union
 
 import flux
@@ -85,3 +86,28 @@ def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> str
         return json.dumps({"success": False, "error": f"Job {job_id} not found."})
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)})
+
+
+def flux_get_job_logs(job_id: Union[int, str], uri: Optional[str] = None, delay: int = 0) -> list:
+    """
+    Retrieves status and information about a specific job.
+
+    Args:
+        job_id: The ID of the job.
+        uri: Optional Flux URI.
+        delay: How long to wait (defaults to 0)
+    """
+    lines = []
+    start = time.time()
+    try:
+        h = get_handle(uri)
+        job_id = flux.job.JobID(job_id)
+        for line in flux.job.event_watch(h, job_id, "guest.output"):
+            if "data" in line.context:
+                lines.append(line.context["data"])
+            now = time.time()
+            if delay is not None and (now - start) > delay:
+                return lines
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)})
+    return lines
