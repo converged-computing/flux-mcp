@@ -226,3 +226,81 @@ async def test_submit_cancel_workflow(client):
         final_state == "INACTIVE"
     ), f"Job failed to transition to INACTIVE. Stuck in {final_state}"
     print(" -> Job successfully transitioned to INACTIVE.")
+
+
+@pytest.mark.asyncio
+async def test_get_job_logs_workflow(client):
+    """
+    Integration Test:
+    1. Submit a job that echoes a specific string.
+    2. Wait for the job to produce output.
+    3. Call 'flux_get_job_logs' to retrieve the output.
+    4. Verify the output matches what was echoed.
+    """
+    print("\n[Step 1] Submitting a job that produces output...")
+
+    test_message = "HPC_LOG_TEST_SUCCESS_12345"
+
+    # Define a job that prints our test message
+    log_jobspec = {
+        "version": 1,
+        "resources": [
+            {
+                "type": "node",
+                "count": 1,
+                "with": [
+                    {
+                        "type": "slot",
+                        "count": 1,
+                        "label": "task",
+                        "with": [{"type": "core", "count": 1}],
+                    }
+                ],
+            }
+        ],
+        "tasks": [{"command": ["echo", test_message], "slot": "task", "count": {"per_slot": 1}}],
+        "attributes": {"system": {"duration": 0}},
+    }
+
+    # Submit the job
+    submit_result = await client.call_tool(
+        "flux_submit_job", {"jobspec": json.dumps(log_jobspec), "submit_async": False}
+    )
+    submit_data = json.loads(submit_result.content[0].text)
+    assert submit_data["success"] is True
+    job_id = submit_data["job_id"]
+
+    print(f" -> Job {job_id} submitted. Waiting for output...")
+
+    # 2. Brief wait to ensure Flux handles the event stream
+    # Flux output events are usually near-instant but require the job to run
+    await asyncio.sleep(1.0)
+
+    # 3. Call 'flux_get_job_logs'
+    # We use a delay of 5 seconds to ensure we capture the output event
+    print(f"[Step 2] Retrieving logs for Job {job_id}...")
+    log_result = await client.call_tool("flux_get_job_logs", {"job_id": job_id, "delay": 5})
+
+    # Note: FastMCP usually returns the tool's return value as a string in .text
+    # Based on the implementation, it's either a list of lines or a JSON error string.
+    output_raw = log_result.content[0].text
+
+    # Try to parse as JSON in case it's an error message
+    try:
+        data = json.loads(output_raw)
+        if isinstance(data, dict) and data.get("success") is False:
+            pytest.fail(f"Tool returned error: {data.get('error')}")
+        # If it's a list, log_data will be our list of lines
+        log_lines = data
+    except json.JSONDecodeError:
+        # If not JSON, it might be the raw string representation of the list
+        log_lines = output_raw
+
+    print(f" -> Received log lines: {log_lines}")
+
+    # 4. Verify the message is in the logs
+    assert any(
+        test_message in str(line) for line in log_lines
+    ), f"Expected message '{test_message}' not found in logs: {log_lines}"
+
+    print(" -> Logs successfully retrieved and verified.")

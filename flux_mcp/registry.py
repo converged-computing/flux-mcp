@@ -16,6 +16,7 @@ TOOLS = [
     job.flux_submit_job,
     job.flux_cancel_job,
     job.flux_get_job_info,
+    job.flux_get_job_logs,
     # Flux sched
     sched.flux_sched_init_graph,
     sched.flux_sched_partial_cancel,
