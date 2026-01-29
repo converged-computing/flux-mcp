@@ -19,6 +19,21 @@ def flux_validate_jobspec_persona(script: Annotated[str, "Batch script or job sp
     return {"messages": [{"role": "user", "content": {"type": "text", "text": prompt_text}}]}
 
 
+def flux_validate_batch_jobspec(content: Annotated[str, "Loaded jobspec"]):
+    """
+    Validate a batch.sh
+    """
+    errors = []
+    validator = Validator("batch")
+    try:
+        # Setting fail fast to False means we will get ALL errors at once
+        validator.validate(content, fail_fast=False)
+    except Exception as e:
+        display_error(content, str(e))
+        errors.append(str(e))
+    return {"jobspec": None, "errors": errors, "valid": not errors}
+
+
 def flux_validate_jobspec(content: Annotated[str, "Loaded jobspec"]):
     """
     Validate a batch.sh, jobspec.yaml, or jobspec.json.
@@ -29,24 +44,17 @@ def flux_validate_jobspec(content: Annotated[str, "Loaded jobspec"]):
     try:
         yaml_content = yaml.safe_load(content)
         json_content = json.dumps(yaml_content)
-    except Exception as e:
-        errors.append(str(e))
-        return {"jobspec": jobspec, "errors": errors, "valid": not errors}
 
-    if not isinstance(yaml_content, dict):
-        validator = Validator("batch")
-        try:
-            # Setting fail fast to False means we will get ALL errors at once
-            validator.validate(content, fail_fast=False)
-        except Exception as e:
-            display_error(content, str(e))
-            errors.append(str(e))
-    else:
-        try:
-            _, jobspec = validate_jobspec(json_content)
-        except Exception as e:
-            display_error(content, str(e))
-            errors.append(str(e))
+    # Fall back to validating batch. Do not consider this an error
+    except Exception as e:
+        return flux_validate_batch_jobspec(content)
+
+    # If we get here, we got json/yaml dict
+    try:
+        _, jobspec = validate_jobspec(json_content)
+    except Exception as e:
+        display_error(content, str(e))
+        errors.append(str(e))
     return {"jobspec": jobspec, "errors": errors, "valid": not errors}
 
 
