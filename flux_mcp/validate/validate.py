@@ -78,13 +78,8 @@ class Validator(BatchCmd):
             changes = "\n".join(changes)
             raise ValueError(f"Jobspec is invalid, required changes: {changes}")
 
-        # Total number of args so we can calculate how many we got wrong
+        # Total number so we can calculate how many we got wrong
         errors = []
-        if any([re.search("^#FLUX ", x) for x in content.split("\n")]):
-            if fail_fast:
-                raise ValueError("#FLUX directives need to be FLUX:")
-            else:
-                errors.append("#FLUX directives need to be FLUX:")
 
         # SETARGS(['--tasks=5'])
         # SETARGS(['-N', '1'])
