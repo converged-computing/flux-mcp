@@ -75,7 +75,6 @@ class Validator(BatchCmd):
         # Changes are removed lines to get it to read
         batchscript, changes = self.get_directive_parser(content)
         if changes:
-            changes = "\n".join(changes)
             raise ValueError(f"Jobspec is invalid, required changes: {changes}")
 
         # Total number so we can calculate how many we got wrong
@@ -94,9 +93,9 @@ class Validator(BatchCmd):
                 if fail_fast:
                     raise ValueError(f"Invalid batch job directive {name}: {e}")
                 else:
-                    errors.append(f"{name}: {e}")
+                    errors.append(name)
 
-        if not fail_fast and errors:
+        if errors:
             errors = "\n".join(errors)
             raise ValueError(f"Validation failed at directives:\n{errors}")
 
