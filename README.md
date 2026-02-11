@@ -45,6 +45,15 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVe
 python3 -m flux_mcp.server.fastmcp
 ```
 
+### Docker
+
+We have a provided [Dockerfile](Dockerfile) that builds and includes [mcp-server](https://github.com/converged-computing/mcp-server) to provide the basic set of Flux endpoints (submit, info, cancel, etc) via the configuration file [flux-mcp.yaml](examples/servers/flux-mcp.yaml). You can tweak that file and build, or just use from our GitHub packages registry.
+
+```bash
+docker build -t ghcr.io/converged-computing/flux-mcp:latest .
+docker run -it -p 8089:8089 ghcr.io/converged-computing/flux-mcp:latest
+```
+
 ### Testing
 
 I will add tools to git as I write tests for them. To test, start the fastmcp server in one terminal:
