@@ -31,7 +31,8 @@ def flux_validate_batch_jobspec(content: Annotated[str, "Loaded jobspec"]):
     except Exception as e:
         display_error(content, str(e))
         errors.append(str(e))
-    return {"jobspec": None, "errors": errors, "valid": not errors}
+    # Return the original jobspec so there is a record
+    return {"jobspec": content, "errors": errors, "valid": not errors}
 
 
 def flux_validate_jobspec(content: Annotated[str, "Loaded jobspec"]):
