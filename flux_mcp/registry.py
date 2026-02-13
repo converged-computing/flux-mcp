@@ -18,6 +18,7 @@ TOOLS = [
     # Job core
     job.flux_submit_job,
     job.flux_cancel_job,
+    job.flux_submit_jobspec,
     job.flux_get_job_info,
     job.flux_get_job_logs,
     # Flux sched

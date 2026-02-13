@@ -34,6 +34,75 @@ def simple_jobspec_dict():
     }
 
 
+import json
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_submit_command_sync(client):
+    """
+    Test: Synchronous submission using a command list.
+    Verifies that passing a command directly works without a manual jobspec.
+    """
+    # Using the new signature: command is required, other args are optional
+    arguments = {
+        "command": ["/bin/true"],
+        "num_tasks": 1,
+        "cores_per_task": 1,
+        "submit_async": False,
+        "name": "test-sync-job",
+    }
+
+    result = await client.call_tool("flux_submit_job", arguments)
+
+    data = json.loads(result.content[0].text)
+    print(f"\nCommand Sync Submit Result: {data}")
+
+    assert data["success"] is True
+    assert "job_id" in data
+    assert isinstance(data["job_id"], int)
+
+
+@pytest.mark.asyncio
+async def test_submit_command_async(client):
+    """
+    Test: Asynchronous submission using command arguments.
+    """
+    arguments = {
+        "command": ["/bin/sleep", "1"],
+        "num_tasks": 2,
+        "num_nodes": 1,
+        "submit_async": True,
+        "cwd": "/tmp",
+    }
+
+    result = await client.call_tool("flux_submit_job", arguments)
+
+    data = json.loads(result.content[0].text)
+    print(f"\nCommand Async Submit Result: {data}")
+
+    assert data["success"] is True
+    assert "job_id" in data
+
+
+@pytest.mark.asyncio
+async def test_submit_command_with_environment(client):
+    """
+    Test: Verifies complex arguments like environment mappings are handled.
+    """
+    arguments = {
+        "command": ["/usr/bin/env"],
+        "environment": {"TEST_VAR": "FLUX_POWER", "USER": "cat_scientist"},
+        "submit_async": False,
+    }
+
+    result = await client.call_tool("flux_submit_job", arguments)
+
+    data = json.loads(result.content[0].text)
+    assert data["success"] is True
+
+
 @pytest.fixture
 def simple_json_jobspec(simple_jobspec_dict):
     return json.dumps(simple_jobspec_dict)
@@ -50,7 +119,7 @@ async def test_submit_sync_json(client, simple_json_jobspec):
     Test 1: Synchronous submission using JSON.
     """
     result = await client.call_tool(
-        "flux_submit_job", {"jobspec": simple_json_jobspec, "submit_async": False}
+        "flux_submit_jobspec", {"jobspec": simple_json_jobspec, "submit_async": False}
     )
 
     data = json.loads(result.content[0].text)
@@ -68,7 +137,7 @@ async def test_submit_async_json(client, simple_json_jobspec):
     Test 2: Asynchronous submission using JSON.
     """
     result = await client.call_tool(
-        "flux_submit_job", {"jobspec": simple_json_jobspec, "submit_async": True}
+        "flux_submit_jobspec", {"jobspec": simple_json_jobspec, "submit_async": True}
     )
 
     data = json.loads(result.content[0].text)
@@ -83,7 +152,7 @@ async def test_submit_yaml(client, simple_yaml_jobspec):
     NOTE: This will fail if the server tool does not implement yaml.safe_load.
     """
     result = await client.call_tool(
-        "flux_submit_job", {"jobspec": simple_yaml_jobspec, "submit_async": False}
+        "flux_submit_jobspec", {"jobspec": simple_yaml_jobspec, "submit_async": False}
     )
 
     data = json.loads(result.content[0].text)
@@ -111,7 +180,7 @@ async def test_submit_and_get_info_workflow(client, simple_json_jobspec):
 
     # 1. Submit
     submit_result = await client.call_tool(
-        "flux_submit_job", {"jobspec": simple_json_jobspec, "submit_async": False}
+        "flux_submit_jobspec", {"jobspec": simple_json_jobspec, "submit_async": False}
     )
 
     submit_data = json.loads(submit_result.content[0].text)
@@ -177,7 +246,7 @@ async def test_submit_cancel_workflow(client):
 
     # Submit
     submit_result = await client.call_tool(
-        "flux_submit_job", {"jobspec": json.dumps(sleep_jobspec), "submit_async": True}
+        "flux_submit_jobspec", {"jobspec": json.dumps(sleep_jobspec), "submit_async": True}
     )
     submit_data = json.loads(submit_result.content[0].text)
     assert submit_data["success"] is True
@@ -264,7 +333,7 @@ async def test_get_job_logs_workflow(client):
 
     # Submit the job
     submit_result = await client.call_tool(
-        "flux_submit_job", {"jobspec": json.dumps(log_jobspec), "submit_async": False}
+        "flux_submit_jobspec", {"jobspec": json.dumps(log_jobspec), "submit_async": False}
     )
     submit_data = json.loads(submit_result.content[0].text)
     assert submit_data["success"] is True
