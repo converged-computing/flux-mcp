@@ -1,6 +1,7 @@
 import json
+import os
 import time
-from typing import Optional, Union
+from typing import Any, List, Mapping, Optional, Union
 
 import flux
 import flux.job
@@ -15,9 +16,118 @@ def get_handle(uri: Optional[str] = None) -> flux.Flux:
     return flux.Flux()
 
 
-def flux_submit_job(jobspec: str, uri: Optional[str] = None, submit_async: bool = True) -> str:
+def flux_submit_job(
+    command: List[str],
+    uri: Optional[str] = None,
+    submit_async: bool = True,
+    num_tasks: int = 1,
+    cores_per_task: int = 1,
+    gpus_per_task: Optional[int] = None,
+    num_nodes: Optional[int] = None,
+    exclusive: bool = False,
+    duration: Optional[Union[int, float, str]] = None,
+    environment: Optional[Mapping[str, str]] = None,
+    env_expand: Optional[Mapping[str, str]] = None,
+    cwd: Optional[str] = None,
+    rlimits: Optional[Mapping[str, int]] = None,
+    name: Optional[str] = None,
+    input: Optional[Union[str, os.PathLike]] = None,
+    output: Optional[Union[str, os.PathLike]] = None,
+    error: Optional[Union[str, os.PathLike]] = None,
+    label_io: bool = False,
+    unbuffered: bool = False,
+    queue: Optional[str] = None,
+    bank: Optional[str] = None,
+) -> str:
     """
-    Submits a job to Flux.
+    Creates a Jobspec from a command and submits it to Flux.
+
+    Args:
+        command: Command to execute (iterable of strings).
+        uri: Optional Flux URI. If not provided, uses local instance.
+        submit_async: Whether to submit the job asynchronously.
+        num_tasks: Number of tasks to create.
+        cores_per_task: Number of cores to allocate per task.
+        gpus_per_task: Number of GPUs to allocate per task.
+        num_nodes: Distribute allocated tasks across N individual nodes.
+        exclusive: Always allocate nodes exclusively.
+        duration: Time limit in Flux Standard Duration (str), seconds (int/float), or timedelta.
+        environment: Mapping of environment variables for the job.
+        env_expand: Mapping of environment variables containing mustache templates.
+        cwd: Set the current working directory for the job.
+        rlimits: Mapping of process resource limits (e.g. {"nofile": 12000}).
+        name: Set a custom job name.
+        input: Path to a file for job input.
+        output: Path to a file for job output (stdout).
+        error: Path to a file for job error (stderr).
+        label_io: Label output with the source task IDs.
+        unbuffered: Disable output buffering.
+        queue: Set the queue for the job.
+        bank: Set the bank for the job.
+
+    Returns:
+        JSON string containing the success status and Job ID or error message.
+    """
+    try:
+        # Generate the Jobspec from the provided arguments
+        jobspec = flux.job.JobspecV1.from_command(
+            command=command,
+            num_tasks=num_tasks,
+            cores_per_task=cores_per_task,
+            gpus_per_task=gpus_per_task,
+            num_nodes=num_nodes,
+            exclusive=exclusive,
+            duration=duration,
+            environment=environment,
+            env_expand=env_expand,
+            cwd=cwd,
+            rlimits=rlimits,
+            name=name,
+            input=input,
+            output=output,
+            error=error,
+            label_io=label_io,
+            unbuffered=unbuffered,
+            queue=queue,
+            bank=bank,
+        )
+        h = get_handle(uri)
+
+        # Submit the job
+        if submit_async:
+            future = flux.job.submit_async(h, jobspec)
+            jobid = future.get_id()
+        else:
+            jobid = flux.job.submit(h, jobspec)
+        return json.dumps({"success": True, "job_id": int(jobid), "uri": uri or "local"})
+
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)})
+
+
+def flux_submit_jobspec(jobspec: str, uri: Optional[str] = None, submit_async: bool = True) -> str:
+    """
+    Submits a job to Flux. An example jobspec requires attributes, tasks, resources, version
+    and at least one referenced slot.
+    {
+        "version": 1,
+        "resources": [
+            {
+                "type": "node",
+                "count": 1,
+                "with": [
+                    {
+                        "type": "slot",
+                        "count": 1,
+                        "label": "task",
+                        "with": [{"type": "core", "count": 1}],
+                    }
+                ],
+            }
+        ],
+        "tasks": [{"command": ["/bin/true"], "slot": "task", "count": {"per_slot": 1}}],
+        "attributes": {"system": {"duration": 0}},
+    }
 
     Args:
         jobspec: A valid JSON string or YAML string of the jobspec.
