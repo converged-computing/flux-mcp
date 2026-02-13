@@ -77,21 +77,36 @@ def flux_submit_job(
             gpus_per_task=gpus_per_task,
             num_nodes=num_nodes,
             exclusive=exclusive,
-            duration=duration,
-            environment=environment,
-            env_expand=env_expand,
-            cwd=cwd,
-            rlimits=rlimits,
-            name=name,
-            input=input,
-            output=output,
-            error=error,
-            label_io=label_io,
-            unbuffered=unbuffered,
-            queue=queue,
-            bank=bank,
         )
         h = get_handle(uri)
+
+        # Note that newer flux (as of 8 months ago) supports these are arguments above
+        if environment is not None:
+            jobspec.environment = environment
+        if duration is not None:
+            jobspec.duration = duration
+        if cwd is not None:
+            jobspec.cwd = cwd
+        if env_expand is not None:
+            jobspec.env_expand = env_expand
+        if rlimits is not None:
+            jobspec.rlimits = rliits
+        if input is not None:
+            jobspec.input = input
+        if output is not None:
+            jobspec.output = output
+        if error is not None:
+            jobspec.error = error
+        if queue is not None:
+            jobspec.queue = queue
+        if bank is not None:
+            jobspec.bank = bank
+        if unbuffered is not None:
+            jobspec.unbuffered = unbuffered
+        if label_io is not None:
+            jobspec.label_io = label_io
+        if name is not None:
+            jobspec.name = name
 
         # Submit the job
         if submit_async:
