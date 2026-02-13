@@ -28,6 +28,8 @@ You will need fastapi and fastmcp installed.
 ```bash
 # fastmcp
 pip install fastmcp fastapi
+# in the devcontainer
+pip install fastmcp fastapi --break-system-packages
 ```
 
 To start the demo server:
@@ -56,6 +58,12 @@ docker run -it -p 8089:8089 ghcr.io/converged-computing/flux-mcp:latest
 
 ### Testing
 
+You need pytest
+
+```bash
+pip install pytest --break-system-packages
+```
+
 I will add tools to git as I write tests for them. To test, start the fastmcp server in one terminal:
 
 ```bash
@@ -77,6 +85,7 @@ pytest -xs tests/test_flux_counts.py
 pytest -xs tests/test_flux_job_delegation.py
 pytest -xs tests/test_flux_job_core.py
 pytest -xs tests/test_transformers.py
+pytest -xs tests/test_flux_resource.py
 
 # Requires libreapi_cli.so
 pytest -xs tests/test_flux_sched.py

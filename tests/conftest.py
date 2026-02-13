@@ -2,6 +2,7 @@ import json
 
 import pytest
 import pytest_asyncio
+import yaml
 from fastmcp import Client
 
 
@@ -129,6 +130,43 @@ def valid_json_jobspec():
             "version": 1,
         }
     )
+
+
+@pytest.fixture
+def simple_yaml_jobspec(simple_resource_jobspec_dict):
+    return yaml.dump(simple_resource_jobspec_dict)
+
+
+@pytest.fixture
+def simple_resource_jobspec_dict():
+    return {
+        "resources": [
+            {
+                "type": "slot",
+                "count": 1,
+                "label": "default",
+                "with": [
+                    {
+                        "type": "node",
+                        "count": 1,
+                        "exclusive": True,
+                        "with": [
+                            {
+                                "type": "slot",
+                                "count": 1,
+                                "with": [{"type": "core", "count": 1}],
+                                "label": "task",
+                            }
+                        ],
+                    },
+                    {"type": "ssd", "count": 20480, "exclusive": True},
+                ],
+            }
+        ],
+        "tasks": [{"command": ["hostname"], "slot": "task", "count": {"per_slot": 1}}],
+        "attributes": {"system": {"duration": 0, "environment": {}, "shell": {}}},
+        "version": 1,
+    }
 
 
 @pytest.fixture
