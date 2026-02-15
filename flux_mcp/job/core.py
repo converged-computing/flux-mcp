@@ -1,12 +1,30 @@
 import json
 import os
 import time
-from typing import Any, List, Mapping, Optional, Union
+from typing import Annotated, Any, Dict, List, Mapping, Optional, Union
 
 import flux
 import flux.job
 
 import flux_mcp.utils as utils
+
+# Define custom types for MCP schema clarity
+JobSubmissionResult = Annotated[
+    Dict[str, Any],
+    "A structured result containing 'success' (bool), 'job_id' (int), and 'uri' (str) if successful; otherwise 'success': false and 'error' (str).",
+]
+JobActionResponse = Annotated[
+    Dict[str, Any],
+    "A structured response containing 'success' (bool), a descriptive 'message' (str), and the 'job_id'.",
+]
+JobInfoResult = Annotated[
+    Dict[str, Any],
+    "A dictionary of all available job metadata (e.g., status, userid, priority, t_submit).",
+]
+LogLinesResult = Annotated[
+    Union[List[str], Dict[str, Any]],
+    "A list of strings where each entry is a line of output from the job, or an error dictionary.",
+]
 
 
 def get_handle(uri: Optional[str] = None) -> flux.Flux:
@@ -38,7 +56,7 @@ def flux_submit_job(
     unbuffered: bool = False,
     queue: Optional[str] = None,
     bank: Optional[str] = None,
-) -> str:
+) -> JobSubmissionResult:
     """
     Creates a Jobspec from a command and submits it to Flux.
 
@@ -66,7 +84,7 @@ def flux_submit_job(
         bank: Set the bank for the job.
 
     Returns:
-        JSON string containing the success status and Job ID or error message.
+        Dictionary containing the success status and Job ID or error message.
     """
     try:
         # Generate the Jobspec from the provided arguments
@@ -114,63 +132,46 @@ def flux_submit_job(
             jobid = future.get_id()
         else:
             jobid = flux.job.submit(h, jobspec)
-        return json.dumps({"success": True, "job_id": int(jobid), "uri": uri or "local"})
+        return {"success": True, "job_id": int(jobid), "uri": uri or "local"}
 
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {"success": False, "error": str(e)}
 
 
-def flux_submit_jobspec(jobspec: str, uri: Optional[str] = None, submit_async: bool = True) -> str:
+def flux_submit_jobspec(
+    jobspec: str, uri: Optional[str] = None, submit_async: bool = True
+) -> JobSubmissionResult:
     """
     Submits a job to Flux. An example jobspec requires attributes, tasks, resources, version
     and at least one referenced slot.
-    {
-        "version": 1,
-        "resources": [
-            {
-                "type": "node",
-                "count": 1,
-                "with": [
-                    {
-                        "type": "slot",
-                        "count": 1,
-                        "label": "task",
-                        "with": [{"type": "core", "count": 1}],
-                    }
-                ],
-            }
-        ],
-        "tasks": [{"command": ["/bin/true"], "slot": "task", "count": {"per_slot": 1}}],
-        "attributes": {"system": {"duration": 0}},
-    }
 
     Args:
         jobspec: A valid JSON string or YAML string of the jobspec.
         uri: Optional Flux URI. If not provided, uses local instance.
 
     Returns:
-        JSON string containing the new Job ID or error message.
+        Dictionary containing the new Job ID or error message.
     """
     try:
         # Ensure we got a json string
-        jobspec = json.dumps(utils.load_jobspec(jobspec))
+        jobspec = utils.load_jobspec(jobspec)
         h = get_handle(uri)
 
         # Submit the job
         if submit_async:
-            future = flux.job.submit_async(h, jobspec)
+            future = flux.job.submit_async(h, json.dumps(jobspec))
             jobid = future.get_id()
         else:
-            jobid = flux.job.submit(h, jobspec)
+            jobid = flux.job.submit(h, json.dumps(jobspec))
 
         # Return success with the integer ID
-        return json.dumps({"success": True, "job_id": int(jobid), "uri": uri or "local"})
+        return {"success": True, "job_id": int(jobid), "uri": uri or "local"}
 
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {"success": False, "error": str(e)}
 
 
-def flux_cancel_job(job_id: Union[int, str], uri: Optional[str] = None) -> str:
+def flux_cancel_job(job_id: Union[int, str], uri: Optional[str] = None) -> JobActionResponse:
     """
     Cancels a specific Flux job.
 
@@ -182,18 +183,20 @@ def flux_cancel_job(job_id: Union[int, str], uri: Optional[str] = None) -> str:
         h = get_handle(uri)
 
         # Convert to proper integer ID
-        job_id = flux.job.JobID(job_id)
-        flux.job.cancel(h, job_id)
+        jid = flux.job.JobID(job_id)
+        flux.job.cancel(h, jid)
 
-        return json.dumps(
-            {"success": True, "message": f"Job {job_id} cancellation requested.", "job_id": job_id}
-        )
+        return {
+            "success": True,
+            "message": f"Job {job_id} cancellation requested.",
+            "job_id": int(jid),
+        }
 
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {"success": False, "error": str(e)}
 
 
-def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> str:
+def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> JobInfoResult:
     """
     Retrieves status and information about a specific job.
 
@@ -205,15 +208,17 @@ def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> str
         h = get_handle(uri)
         id_int = flux.job.JobID(job_id)
         info = flux.job.get_job(h, id_int)
-        return json.dumps(info)
+        return dict(info)
 
     except EnvironmentError:
-        return json.dumps({"success": False, "error": f"Job {job_id} not found."})
+        return {"success": False, "error": f"Job {job_id} not found."}
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {"success": False, "error": str(e)}
 
 
-def flux_get_job_logs(job_id: Union[int, str], uri: Optional[str] = None, delay: int = 0) -> list:
+def flux_get_job_logs(
+    job_id: Union[int, str], uri: Optional[str] = None, delay: int = 0
+) -> LogLinesResult:
     """
     Retrieves status and information about a specific job.
 
@@ -226,13 +231,13 @@ def flux_get_job_logs(job_id: Union[int, str], uri: Optional[str] = None, delay:
     start = time.time()
     try:
         h = get_handle(uri)
-        job_id = flux.job.JobID(job_id)
-        for line in flux.job.event_watch(h, job_id, "guest.output"):
+        job_id_obj = flux.job.JobID(job_id)
+        for line in flux.job.event_watch(h, job_id_obj, "guest.output"):
             if "data" in line.context:
                 lines.append(line.context["data"])
             now = time.time()
             if delay is not None and (now - start) > delay:
                 return lines
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {"success": False, "error": str(e)}
     return lines
