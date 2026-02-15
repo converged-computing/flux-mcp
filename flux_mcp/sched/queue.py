@@ -1,41 +1,74 @@
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, Dict, List, Optional, Union
 
 import flux.job
 
 from flux_mcp.job.core import get_handle
 
-# Queue Manager RPCs
+QManagerStats = Annotated[
+    Dict[str, Any],
+    "A structured report of the queue manager state, including queue depths and job counts "
+    "categorized by state (e.g., pending, running).",
+]
+
+AllocationResult = Annotated[
+    Dict[str, Any],
+    "A dictionary containing the result of a resource match request. Expected keys: "
+    "'jobid' (int), 'status' (int), 'at' (float timestamp of allocation), "
+    "'overhead' (float time in seconds), and 'R' (the RFC 20 resource set string).",
+]
+
+FeasibilityResponse = Annotated[
+    Dict[str, Any],
+    "A report indicating if the requested resources are theoretically satisfiable within "
+    "the current cluster configuration, without performing an actual allocation.",
+]
+
+ResourceInfo = Annotated[
+    Dict[str, Any],
+    "Metadata regarding a specific resource vertex or job allocation, typically including "
+    "timing data, status, or properties.",
+]
+
+GenericRPCResponse = Annotated[
+    Dict[str, Any], "The raw response dictionary from the Flux RPC call."
+]
 
 
 def flux_sched_qmanager_stats(
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    uri: Annotated[
+        Optional[str],
+        "The Flux connection URI (e.g., 'local:///run/flux/local'). Defaults to the local instance.",
+    ] = None,
+) -> QManagerStats:
     """
-    Retrieve stats for the Flux queue manager.
+    Retrieves real-time statistics from the Flux Queue Manager.
+
+    This includes counts of jobs in various states across different queues, which is
+    useful for monitoring scheduler load and identifying bottlenecked queues.
 
     Args:
-        uri: Optional Flux URI.
+        uri: Optional unique resource identifier for the Flux instance.
+
     Returns:
-        JSON structure of queues with depths, and jobs in different states.
+        A dictionary mapping queue names to statistics like depth and job state tallies.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-qmanager.stats-get").get()
 
 
-# Fluxion Resource RPCs
-
-
 def flux_sched_resource_allocate(
-    jobspec: str, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobspec: Annotated[str, "A YAML string representing the job's resource requirements (RFC 25)."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> AllocationResult:
     """
-    Allocate the best matching resources for a given jobspec.
+    Attempts to allocate the best matching resources for a given jobspec immediately.
 
     Args:
-        jobspec: A YAML string representing the job requirements.
+        jobspec: The job requirements in YAML/JSON format.
         uri: Optional Flux URI.
+
     Returns:
-        A dictionary containing 'jobid', 'status', 'at', 'overhead', and matched resource 'R'.
+        Allocation details including the matched resource set 'R'.
     """
     handle = get_handle(uri)
     jobid = flux.job.JobID(handle.rpc("sched-fluxion-resource.next_jobid").get()["jobid"])
@@ -44,16 +77,21 @@ def flux_sched_resource_allocate(
 
 
 def flux_sched_resource_allocate_with_satisfiability(
-    jobspec: str, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobspec: Annotated[str, "A YAML string representing the job's resource requirements (RFC 25)."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> AllocationResult:
     """
-    Allocate best matching resources if found; otherwise, check jobspec's overall satisfiability.
+    Attempts to allocate resources; if no immediate match is found, performs a satisfiability check.
+
+    This is useful to distinguish between a cluster that is currently full vs. a
+    jobspec that can never be satisfied by the current cluster hardware.
 
     Args:
-        jobspec: A YAML string representing the job requirements.
+        jobspec: The job requirements.
         uri: Optional Flux URI.
+
     Returns:
-        Allocation details or satisfiability status.
+        Allocation details or a status indicating overall satisfiability.
     """
     handle = get_handle(uri)
     jobid = flux.job.JobID(handle.rpc("sched-fluxion-resource.next_jobid").get()["jobid"])
@@ -62,16 +100,18 @@ def flux_sched_resource_allocate_with_satisfiability(
 
 
 def flux_sched_resource_allocate_orelse_reserve(
-    jobspec: str, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobspec: Annotated[str, "A YAML string representing the job's resource requirements (RFC 25)."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> AllocationResult:
     """
-    Allocate best matching resources if found; otherwise, reserve them at the earliest time.
+    Attempts immediate allocation; if unavailable, finds the earliest possible reservation time.
 
     Args:
-        jobspec: A YAML string representing the job requirements.
+        jobspec: The job requirements.
         uri: Optional Flux URI.
+
     Returns:
-        Allocation or reservation timing and resource 'R'.
+        Either immediate allocation details or future reservation timing and resources.
     """
     handle = get_handle(uri)
     jobid = flux.job.JobID(handle.rpc("sched-fluxion-resource.next_jobid").get()["jobid"])
@@ -80,35 +120,44 @@ def flux_sched_resource_allocate_orelse_reserve(
 
 
 def flux_sched_resource_feasibility_check(
-    jobspec_dict: dict, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobspec_dict: Annotated[Dict[str, Any], "A dictionary representing the jobspec requirements."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> FeasibilityResponse:
     """
-    Check if a jobspec is satisfiable without performing an allocation.
+    Performs a theoretical check to see if a jobspec could ever run on the cluster.
+
+    This does not consume resources or create a reservation. It is used to validate
+    if the cluster configuration supports the request (e.g., checking if 8 GPUs are
+    even available in the graph).
 
     Args:
-        jobspec_dict: A dictionary representing the jobspec requirements.
+        jobspec_dict: Job requirements as a dictionary.
         uri: Optional Flux URI.
+
     Returns:
-        The response from the feasibility check.
+        A response indicating success or failure of the feasibility check.
     """
     handle = get_handle(uri)
     return handle.rpc("feasibility.check", {"jobspec": jobspec_dict}).get()
 
 
 def flux_sched_resource_update(
-    jobid: Union[int, str],
-    res_json: str,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    jobid: Annotated[Union[int, str], "The job identifier."],
+    res_json: Annotated[str, "A JSON string representing the updated resource set (R)."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Update the resource database for a specific job with a new resource set (R).
+    Updates the resource database for a specific job with a new resource set (R).
+
+    Used when an allocation needs to be modified or refined after the initial match.
 
     Args:
-        jobid: The job identifier (string or integer).
-        res_json: A JSON string representing the resource (R) to update.
+        jobid: The identifier of the target job.
+        res_json: The new resource (R) definition.
         uri: Optional Flux URI.
+
     Returns:
-        Dictionary with updated resource metadata.
+        Confirmation metadata of the update.
     """
     handle = get_handle(uri)
     payload = {"jobid": flux.job.JobID(jobid), "R": res_json}
@@ -116,35 +165,42 @@ def flux_sched_resource_update(
 
 
 def flux_sched_resource_cancel(
-    jobid: Union[int, str], uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobid: Annotated[Union[int, str], "The job identifier to release resources for."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Cancel an allocated or reserved job.
+    Cancels an allocated or reserved job and returns its resources to the free pool.
 
     Args:
-        jobid: The job identifier (string or integer).
+        jobid: The identifier of the job.
         uri: Optional Flux URI.
+
     Returns:
-        Result of the cancellation RPC.
+        The result of the cancellation request.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.cancel", {"jobid": flux.job.JobID(jobid)}).get()
 
 
 def flux_sched_resource_partial_cancel(
-    jobid: Union[int, str],
-    rv1exec_json: str,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    jobid: Annotated[Union[int, str], "The job identifier."],
+    rv1exec_json: Annotated[
+        str, "A JSON string representing the specific resource subset to release."
+    ],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Partially cancel an allocated job using a specific resource subset.
+    Releases only a portion of a job's allocated resources.
+
+    Useful for jobs that scale down during execution.
 
     Args:
-        jobid: The job identifier (string or integer).
-        rv1exec_json: A JSON string representing the resources to release.
+        jobid: The identifier of the job.
+        rv1exec_json: The specific resource subset to release.
         uri: Optional Flux URI.
+
     Returns:
-        Response from the partial-cancel RPC.
+        The result of the partial-cancel operation.
     """
     handle = get_handle(uri)
     payload = {"jobid": flux.job.JobID(jobid), "R": rv1exec_json}
@@ -152,19 +208,20 @@ def flux_sched_resource_partial_cancel(
 
 
 def flux_sched_resource_find(
-    criteria: str,
-    find_format: Optional[str] = None,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    criteria: Annotated[str, "A compound expression for matching, e.g., 'status=up'."],
+    find_format: Annotated[Optional[str], "The output format, e.g., 'json'."] = None,
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Find resources matching specific criteria (e.g., 'status=up').
+    Searches the resource graph for vertices matching specific criteria.
 
     Args:
-        criteria: Compound expression for matching.
-        find_format: Optional writer format (e.g., 'json').
+        criteria: The query string.
+        find_format: Optional data format for the response.
         uri: Optional Flux URI.
+
     Returns:
-        Dictionary containing matched resources 'R'.
+        A dictionary containing the matched resource nodes.
     """
     handle = get_handle(uri)
     payload = {"criteria": criteria}
@@ -174,19 +231,20 @@ def flux_sched_resource_find(
 
 
 def flux_sched_resource_set_property(
-    resource_path: str,
-    key_val: str,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    resource_path: Annotated[str, "The path to the resource vertex, e.g., 'node0.core0'."],
+    key_val: Annotated[str, "The property string in 'key=value' format."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Set a property (key=value) for a specific resource vertex.
+    Attaches a metadata property (key=value) to a specific resource in the graph.
 
     Args:
-        resource_path: The path to the vertex.
-        key_val: The property string in 'key=value' format.
+        resource_path: Target vertex path.
+        key_val: The property to set.
         uri: Optional Flux URI.
+
     Returns:
-        Result of the set operation.
+        The result of the set operation.
     """
     handle = get_handle(uri)
     payload = {"sp_resource_path": resource_path, "sp_keyval": key_val}
@@ -194,17 +252,20 @@ def flux_sched_resource_set_property(
 
 
 def flux_sched_resource_remove_property(
-    resource_path: str, key: str, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    resource_path: Annotated[str, "The path to the resource vertex."],
+    key: Annotated[str, "The property key to remove."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Remove a property key for a specified resource vertex.
+    Removes a specific metadata property from a resource vertex.
 
     Args:
-        resource_path: The path to the vertex.
-        key: The key to remove.
+        resource_path: Target vertex path.
+        key: The key to delete.
         uri: Optional Flux URI.
+
     Returns:
-        Result of the removal operation.
+        The result of the removal.
     """
     handle = get_handle(uri)
     payload = {"resource_path": resource_path, "key": key}
@@ -212,17 +273,20 @@ def flux_sched_resource_remove_property(
 
 
 def flux_sched_resource_get_property(
-    resource_path: str, key: str, uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    resource_path: Annotated[str, "The path to the resource vertex."],
+    key: Annotated[str, "The property key to retrieve."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Get the values for a specified resource and property key.
+    Retrieves the value of a specific property for a given resource vertex.
 
     Args:
-        resource_path: The path to the vertex.
+        resource_path: Target vertex path.
         key: The property key.
         uri: Optional Flux URI.
+
     Returns:
-        Dictionary containing 'values'.
+        A dictionary containing the property values.
     """
     handle = get_handle(uri)
     payload = {"gp_resource_path": resource_path, "gp_key": key}
@@ -230,34 +294,35 @@ def flux_sched_resource_get_property(
 
 
 def flux_sched_resource_status(
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Retrieve status for resource vertices (up, down, allocated).
+    Retrieves the high-level status (up, down, allocated) for all resource vertices.
 
-    Args:
-        uri: Optional Flux URI.
     Returns:
-        Matched resources for status criteria.
+        A report of resource nodes grouped by their current status.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.status").get()
 
 
 def flux_sched_resource_set_status(
-    resource_path: str,
-    status: str,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    resource_path: Annotated[str, "The path to the resource vertex."],
+    status: Annotated[str, "The desired status string: 'up' or 'down'."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Manually set the status (up/down) of a resource vertex.
+    Manually overrides the operational status of a resource vertex.
+
+    This can be used to drain nodes ('down') or return them to service ('up').
 
     Args:
-        resource_path: The path to the vertex.
-        status: Desired status ('up' or 'down').
+        resource_path: Target vertex path.
+        status: The new status.
         uri: Optional Flux URI.
+
     Returns:
-        Result of the status change.
+        The result of the status update.
     """
     handle = get_handle(uri)
     payload = {"resource_path": resource_path, "status": status}
@@ -265,66 +330,63 @@ def flux_sched_resource_set_status(
 
 
 def flux_sched_resource_stats(
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Retrieve performance and graph statistics.
+    Retrieves internal performance metrics from the Fluxion resource module.
 
-    Args:
-        uri: Optional Flux URI.
+    Includes graph traversal statistics and scheduler matching latencies.
+
     Returns:
-        Dictionary of graph metrics and match timing.
+        A dictionary of performance metrics.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.stats-get").get()
 
 
 def flux_sched_resource_stats_clear(
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Clear performance statistics for the module.
+    Resets the internal performance counters for the resource module.
 
-    Args:
-        uri: Optional Flux URI.
     Returns:
-        Confirmation of clear operation.
+        Confirmation of the reset operation.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.stats-clear").get()
 
 
 def flux_sched_resource_params(
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Display current configuration parameters of the module.
+    Retrieves the current runtime configuration parameters for Fluxion.
 
-    Args:
-        uri: Optional Flux URI.
     Returns:
-        Dictionary of module parameters.
+        A dictionary of the scheduler's internal settings.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.params").get()
 
 
 def flux_sched_resource_ns_info(
-    rank: int,
-    type_name: str,
-    identity: int,
-    uri: Annotated[Optional[str], "unique resource identifier"] = None,
-) -> dict:
+    rank: Annotated[int, "The target rank."],
+    type_name: Annotated[str, "The resource type name, e.g., 'core'."],
+    identity: Annotated[int, "The raw resource ID."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> GenericRPCResponse:
     """
-    Get the remapped (namespaced) ID given a raw ID seen by the reader.
+    Translates a raw resource ID into its namespaced (remapped) equivalent for a specific rank.
 
     Args:
-        rank: Execution target rank.
-        type_name: Resource type (e.g., 'core', 'gpu').
-        identity: Raw ID seen by the reader.
+        rank: The rank context for translation.
+        type_name: Type of resource.
+        identity: The original ID.
         uri: Optional Flux URI.
+
     Returns:
-        Dictionary containing the remapped 'id'.
+        A dictionary containing the remapped ID.
     """
     handle = get_handle(uri)
     payload = {"rank": rank, "type-name": type_name, "id": identity}
@@ -332,16 +394,18 @@ def flux_sched_resource_ns_info(
 
 
 def flux_sched_resource_info(
-    jobid: Union[int, str], uri: Annotated[Optional[str], "unique resource identifier"] = None
-) -> dict:
+    jobid: Annotated[Union[int, str], "The job identifier."],
+    uri: Annotated[Optional[str], "The Flux connection URI."] = None,
+) -> ResourceInfo:
     """
-    Retrieve allocation info and overhead for a specific job.
+    Retrieves detailed allocation information and scheduling overhead for a specific job.
 
     Args:
-        jobid: Job identifier (string or integer).
+        jobid: The identifier of the job.
         uri: Optional Flux URI.
+
     Returns:
-        Job resource status and timing data.
+        Timing data and resource status specific to the job's lifecycle in the scheduler.
     """
     handle = get_handle(uri)
     return handle.rpc("sched-fluxion-resource.info", {"jobid": flux.job.JobID(jobid)}).get()
