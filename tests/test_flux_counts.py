@@ -14,7 +14,7 @@ async def test_count_resources_canonical(client, valid_yaml_jobspec):
 
     # 2. Parse the result
     # FastMCP converts the dictionary return value to a JSON string in the text content
-    counts = json.loads(result.content[0].text)
+    counts = json.loads(result.content[0].text)["counts"]
     print(counts)
 
     # 3. Assertions based on your specific requirements
@@ -46,7 +46,7 @@ async def test_count_resources_invalid_input(client, invalid_yaml_jobspec):
         "flux_count_jobspec_resources", {"content": invalid_yaml_jobspec}
     )
 
-    counts = json.loads(result.content[0].text)
+    counts = json.loads(result.content[0].text)["counts"]
 
     # Based on your provided code: "if not result['valid']: return {}"
     assert counts == {}

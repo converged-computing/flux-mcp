@@ -1,16 +1,42 @@
 import json
-from typing import Optional
+from typing import Annotated, Any, Dict, Optional
 
 import flux_mcp.sched.graph as graph
 
+# Define custom type for MCP schema clarity
+GraphInitResult = Annotated[
+    Dict[str, Any],
+    "A structured result containing 'success' (bool), a descriptive 'message' (str), "
+    "and an 'error' (str) field if the operation failed.",
+]
 
-def flux_sched_init_graph(graph_json: str, options_json: Optional[str] = None) -> str:
+
+def flux_sched_init_graph(
+    graph_json: Annotated[
+        str,
+        "A JSON string representing the JGF (JSON Graph Format) resource graph defining the cluster architecture.",
+    ],
+    options_json: Annotated[
+        Optional[str],
+        "Optional JSON string for loader configuration. Typically includes 'load_format', 'prune_filters', and 'policy'.",
+    ] = None,
+) -> GraphInitResult:
     """
-    Initializes the scheduler resource graph.
+    Initializes or resets the Fluxion scheduler's internal resource graph.
+
+    This function forces the creation of a new resource client and populates it
+    with the provided graph definition. This is a critical setup step for
+    schedulers that manage custom or simulated resource topologies.
 
     Args:
-        graph_json: A JSON string representing the JGF resource graph.
-        options_json: Optional JSON string for loader options (load_format, etc).
+        graph_json: The JGF data defining nodes, cores, and their relationships.
+        options_json: Advanced configuration for the loader. If not provided,
+            defaults to a standard JGF loader with core pruning and containment
+            subsystems.
+
+    Returns:
+        A dictionary indicating if the graph was successfully loaded into
+        the scheduler memory.
     """
     try:
         # An init is going to force a new graph
@@ -29,7 +55,11 @@ def flux_sched_init_graph(graph_json: str, options_json: Optional[str] = None) -
 
         cli.initialize(graph_json, options_json)
 
-        return json.dumps({"success": True, "message": "Resource Graph initialized successfully."})
+        return {"success": True, "message": "Resource Graph initialized successfully."}
 
     except Exception as e:
-        return json.dumps({"success": False, "error": str(e)})
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "There was an error initializing the graph",
+        }

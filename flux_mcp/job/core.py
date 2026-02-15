@@ -11,15 +11,15 @@ import flux_mcp.utils as utils
 # Define custom types for MCP schema clarity
 JobSubmissionResult = Annotated[
     Dict[str, Any],
-    "A structured result containing 'success' (bool), 'job_id' (int), and 'uri' (str) if successful; otherwise 'success': false and 'error' (str).",
+    "A dictionary containing 'success' (bool), 'error' (str or None), 'job_id' (int or None), and 'uri' (str). A failed submission does not have a job_id and will likely have a string error.",
 ]
 JobActionResponse = Annotated[
     Dict[str, Any],
-    "A structured response containing 'success' (bool), a descriptive 'message' (str), and the 'job_id'.",
+    "A structured response containing 'success' (bool), a descriptive 'message' (str), and the 'job_id' and an 'error' if the action was not successful.",
 ]
 JobInfoResult = Annotated[
     Dict[str, Any],
-    "A dictionary of all available job metadata (e.g., status, userid, priority, t_submit).",
+    "A dictionary containing 'success' (bool), 'error' (str or None), and 'info' (dict or None) representing job metadata.",
 ]
 LogLinesResult = Annotated[
     Union[List[str], Dict[str, Any]],
@@ -37,7 +37,6 @@ def get_handle(uri: Optional[str] = None) -> flux.Flux:
 def flux_submit_job(
     command: List[str],
     uri: Optional[str] = None,
-    submit_async: bool = True,
     num_tasks: int = 1,
     cores_per_task: int = 1,
     gpus_per_task: Optional[int] = None,
@@ -126,16 +125,11 @@ def flux_submit_job(
         if name is not None:
             jobspec.name = name
 
-        # Submit the job
-        if submit_async:
-            future = flux.job.submit_async(h, jobspec)
-            jobid = future.get_id()
-        else:
-            jobid = flux.job.submit(h, jobspec)
-        return {"success": True, "job_id": int(jobid), "uri": uri or "local"}
+        jobid = flux.job.submit(h, jobspec)
+        return {"success": True, "error": None, "job_id": int(jobid), "uri": uri or "local"}
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "job_id": None, "uri": uri or "local"}
 
 
 def flux_submit_jobspec(
@@ -168,7 +162,7 @@ def flux_submit_jobspec(
         return {"success": True, "job_id": int(jobid), "uri": uri or "local"}
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "job_id": None, "error": str(e), "uri": uri or "local"}
 
 
 def flux_cancel_job(job_id: Union[int, str], uri: Optional[str] = None) -> JobActionResponse:
@@ -193,7 +187,7 @@ def flux_cancel_job(job_id: Union[int, str], uri: Optional[str] = None) -> JobAc
         }
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "message": "Cancellation had an error."}
 
 
 def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> JobInfoResult:
@@ -207,17 +201,17 @@ def flux_get_job_info(job_id: Union[int, str], uri: Optional[str] = None) -> Job
     try:
         h = get_handle(uri)
         id_int = flux.job.JobID(job_id)
-        info = flux.job.get_job(h, id_int)
-        return dict(info)
+        info = dict(flux.job.get_job(h, id_int))
+        return {"success": True, "error": None, "info": info}
 
-    except EnvironmentError:
-        return {"success": False, "error": f"Job {job_id} not found."}
+    except EnvironmentError as e:
+        return {"success": False, "error": f"Job {job_id} not found.", "info": None}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "info": None}
 
 
 def flux_get_job_logs(
-    job_id: Union[int, str], uri: Optional[str] = None, delay: int = 0
+    job_id: Union[int, str], uri: Optional[str] = None, delay: Optional[int] = None
 ) -> LogLinesResult:
     """
     Retrieves status and information about a specific job.
@@ -225,7 +219,8 @@ def flux_get_job_logs(
     Args:
         job_id: The ID of the job.
         uri: Optional Flux URI.
-        delay: How long to wait (defaults to 0)
+        delay: How long to wait (defaults to None, wait for job to be finished)
+        lines: The log content split into lines
     """
     lines = []
     start = time.time()
@@ -239,5 +234,5 @@ def flux_get_job_logs(
             if delay is not None and (now - start) > delay:
                 return lines
     except Exception as e:
-        return {"success": False, "error": str(e)}
-    return lines
+        return {"success": False, "error": str(e), "lines": None}
+    return {"success": True, "error": None, "lines": lines}

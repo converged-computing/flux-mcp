@@ -1,21 +1,50 @@
 import json
-from typing import Annotated
+from typing import Annotated, Any, Dict, Optional
 
 import flux.resource
 
 from flux_mcp.job.core import get_handle
 
+# This should populate the outputSchema
+ResourceStatus = Annotated[
+    Dict[str, Any],
+    "A detailed report of cluster resource availability. "
+    "The 'up' key represents the total capacity currently online/active. "
+    "The 'free' key represents capacity that is currently idle and available for immediate job scheduling. "
+    "Both sections include counts for cores, gpus, and nodes, as well as specific hostnames and ranks.",
+]
 
-def flux_resource_list(uri: Annotated[str, "unique resource identifier"] = None):
+
+def flux_resource_list(
+    uri: Annotated[
+        Optional[str],
+        "The Flux connection URI (e.g., 'local:///run/flux/local'). Defaults to the local instance.",
+    ] = None,
+) -> ResourceStatus:
     """
-    List Flux resources for a cluster based on a URI of interest
+    Retrieves a detailed inventory of available and active resources within a Flux instance.
+
+    This tool is essential for pre-flight checks before job submission to ensure the
+    cluster has sufficient 'free' resources (cores, GPUs, nodes) to satisfy a
+    job's requirements.
+
     Args:
-        uri: Optional Flux URI. If not provided, uses local instance.
+        uri: Optional unique resource identifier for the Flux instance. If omitted,
+             the function connects to the default local Flux handle.
+
     Returns:
-        JSON string containing resources free/up associated with the uri.
+        A dictionary containing two primary keys: 'free' and 'up'.
+        Each key maps to a sub-dictionary containing:
+            - 'cores' (int): Number of CPU cores.
+            - 'gpus' (int): Number of GPU devices.
+            - 'nodes' (int): Total number of distinct compute nodes.
+            - 'hosts' (list[str]): List of hostnames involved.
+            - 'ranks' (list[int]): Flux ranks associated with these resources.
+            - 'properties' (dict): Arbitrary metadata/attributes assigned to the resources.
     """
     handle = get_handle(uri)
     listing = flux.resource.list.resource_list(handle).get()
+
     return {
         "free": {
             "cores": listing.free.ncores,
