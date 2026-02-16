@@ -1,0 +1,13 @@
+apiVersion: flux-framework.org/v1alpha2
+kind: MiniCluster
+metadata:
+  name: flux-mcp
+spec:
+  size: 2
+  flux:
+    container:
+      image: ghcr.io/converged-computing/flux-view-ubuntu:tag-jammy      
+  containers:
+    - image: ghcr.io/converged-computing/flux-mcp:latest
+      launcher: true
+      command: mcpserver start --port 8089 --host 0.0.0.0 -t http --config /code/scripts/flux-mcp.yaml
