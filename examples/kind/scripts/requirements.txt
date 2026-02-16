@@ -1,0 +1,2 @@
+flux-mcp
+mcp-serve
