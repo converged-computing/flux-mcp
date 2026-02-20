@@ -17,13 +17,26 @@ JobActionResponse = Annotated[
     Dict[str, Any],
     "A structured response containing 'success' (bool), a descriptive 'message' (str), and the 'job_id' and an 'error' if the action was not successful.",
 ]
+
 JobInfoResult = Annotated[
     Dict[str, Any],
-    "A dictionary containing 'success' (bool), 'error' (str or None), and 'info' (dict or None) representing job metadata.",
+    "A structured report containing: "
+    "- 'success' (bool): True if the job was found. "
+    "- 'error' (str): Error message if search failed. "
+    "- 'info' (dict): The job metadata, containing: "
+    "    - 'id' (int): The integer Job ID. "
+    "    - 'state' (str): Current execution state (e.g., DEPEND, PRIORITY, SCHED, RUN, CLEANUP, INACTIVE). "
+    "    - 'status' (str): Human-readable status (e.g., DEPEND, PRIORITY, SCHED, RUN, CLEANUP, COMPLETED, FAILED, CANCELED, or TIMEOUT). "
+    "    - 'result' (str): The final result string. "
+    "    - 'returncode' (int): The process exit code (0 for success). "
+    "    - 'runtime' (float): Total time elapsed in seconds. "
+    "    - 'nnodes'/'ntasks' (int): Resource counts. "
+    "    - 'nodelist' (str): Hostnames assigned to the job.",
 ]
+
 LogLinesResult = Annotated[
-    Union[List[str], Dict[str, Any]],
-    "A list of strings where each entry is a line of output from the job, or an error dictionary.",
+    Dict[str, Any],
+    "A dictionary containing 'success' (bool), 'error' (str or None), and 'lines' (list of strings or None).",
 ]
 
 
@@ -214,25 +227,37 @@ def flux_get_job_logs(
     job_id: Union[int, str], uri: Optional[str] = None, delay: Optional[int] = None
 ) -> LogLinesResult:
     """
-    Retrieves status and information about a specific job.
+    Retrieves the output logs (stdout/stderr) associated with a specific Flux job.
+
+    This function monitors the job's event log for output events. It can either
+    wait until the job finishes or stop after a specified delay.
 
     Args:
-        job_id: The ID of the job.
-        uri: Optional Flux URI.
-        delay: How long to wait (defaults to None, wait for job to be finished)
-        lines: The log content split into lines
+        job_id: The unique identifier of the job (integer or f58 string).
+        uri: Optional Flux handle URI. If omitted, connects to the local instance.
+        delay: The maximum time in seconds to spend collecting logs. If None,
+               the function blocks until the job event stream is closed.
+
+    Returns:
+        A dictionary containing:
+            - 'success' (bool): True if the log retrieval was initiated without error.
+            - 'error' (str or None): A descriptive error message if retrieval failed.
+            - 'lines' (list[str] or None): A list of strings, where each string is
+               a chunk of output data captured from the job's 'guest.output' stream.
     """
     lines = []
     start = time.time()
     try:
         h = get_handle(uri)
         job_id_obj = flux.job.JobID(job_id)
+        # Event watch on the output stream
         for line in flux.job.event_watch(h, job_id_obj, "guest.output"):
             if "data" in line.context:
                 lines.append(line.context["data"])
+
             now = time.time()
             if delay is not None and (now - start) > delay:
-                return lines
+                break
     except Exception as e:
         return {"success": False, "error": str(e), "lines": None}
     return {"success": True, "error": None, "lines": lines}

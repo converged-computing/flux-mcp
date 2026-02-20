@@ -26,9 +26,6 @@ You can also pull and load.
 # Build the image
 docker build --no-cache -t ghcr.io/converged-computing/flux-mcp:latest .
 
-# OR pull
-docker pull ghcr.io/converged-computing/flux-mcp:latest
-
 # Load into kind
 kind load docker-image ghcr.io/converged-computing/flux-mcp:latest
 # You can pull and load these, if desired
@@ -84,17 +81,23 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8089 (Press CTRL+C to quit)
 ```
 
-You can shell into the lead broker (index 0) pod and discover the MCP sidecar running on the headless service:
+You can shell into the lead broker (index 0) pod: 
+
+```bash
+kubectl exec -it $(kubectl get pods -o json | jq -r .items[0].metadata.name) -- bash
+. /mnt/flux/flux-view.sh
+flux proxy $fluxsocket bash
+```
+
+And discover the MCP sidecar running on the headless service:
 
 ```bash
 curl -k flux-mcp-0.flux-mcp.default.svc.cluster.local:8089/mcp
 ```
 
-This means we can also connect to the lead broker and launch work to this API via fractale!
+You'll need to export an API key. Then we can test launching work with fractale.
 
 ```bash
-. /mnt/flux/flux-view.sh
-flux proxy $fluxsocket bash
 fractale prompt Run lammps on the resources you find with input files in /code. Wait until the job finishes and then get the output logs.
 ```
 
