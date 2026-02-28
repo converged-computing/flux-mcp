@@ -110,7 +110,7 @@ curl -k flux-mcp-0.flux-mcp.default.svc.cluster.local:8089/mcp
 You'll need to export an API key, e.g., `GEMINI_API_KEY`. Then we can test launching work with fractale. This first example is asking to respond to a generic prompt:
 
 ```bash
-fractale prompt Submit a job to tell me a joke, and ask me about the category.
+fractale prompt Submit a job to tell me a joke, and ask me about the category. Get the output log to confirm it was successful.
 ```
 
 Here is an example for how to target a specific sub-agent.
@@ -118,6 +118,12 @@ Here is an example for how to target a specific sub-agent.
 ```bash
 # fractale agent <sub-agent>
 fractale agent -r ./fractale/examples/registry/analysis-agents.yaml optimize Discover resources and software installed to spack. Create an optimization agent single step with instruction to choose an application to run with flux, run, and get the logs. 
+
+# Add a log parser?
+fractale agent -r ./fractale/examples/registry/analysis-agents.yaml optimize Discover resources and verify cowsay is installed with spack. Run cowsay with flux, get the logs, and use the result parser to parse out the message.
+
+# More specific - install lammps and parse the log.
+fractale agent -r ./fractale/examples/registry/analysis-agents.yaml optimize Discover resources and verify lammps is installed with spack. Run lammps "lmp" with example data from the cloned repository with flux, get the logs, and parse the figure of merit.
 ```
 
 ## Clean Up

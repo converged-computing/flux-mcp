@@ -6,14 +6,8 @@ spec:
   size: 2
   flux:
     container:
-      image: ghcr.io/converged-computing/flux-view-ubuntu:tag-jammy      
+      disable: true
   containers:
-    - image: ghcr.io/converged-computing/flux-mcp:spack
-      commands:
-        pre: |
-          # Update from view
-          rm -rf /usr/lib/python3/dist-packages/jsonschema* /mnt/flux/view/lib/python3.11/site-packages/jsonschema*
-          python3 -m pip install jsonschema
-
+    - image: ghcr.io/converged-computing/flux-mcp:spack-ubuntu-24.04
       launcher: true
       command: mcpserver start --port 8089 --host 0.0.0.0 -t http --config /code/scripts/run-spack.yaml
