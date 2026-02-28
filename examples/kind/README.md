@@ -24,10 +24,12 @@ You can also pull and load.
 
 ```bash
 # Build the image
-docker build --no-cache -t ghcr.io/converged-computing/flux-mcp:latest .
+docker build -t ghcr.io/converged-computing/flux-mcp:latest .
+docker build -f Dockerfile.spack -t ghcr.io/converged-computing/flux-mcp:spack .
 
 # Load into kind
 kind load docker-image ghcr.io/converged-computing/flux-mcp:latest
+kind load docker-image ghcr.io/converged-computing/flux-mcp:spack
 # You can pull and load these, if desired
 kind load docker-image ghcr.io/converged-computing/flux-view-ubuntu:tag-jammy
 kind load docker-image ghcr.io/flux-framework/tutorials:flux-operator-pytorch
@@ -61,11 +63,19 @@ See the server running:
 kubectl logs $(kubectl get pods -o json | jq -r .items[0].metadata.name) -f
 ```
 ```console
-broker.info[0]: quorum-full: quorum->run 0.465563s
-📖 Loading config from /code/scripts/flux-mcp.yaml
+broker.info[0]: quorum-full: quorum->run 0.47581s
+📖 Loading config from /code/scripts/run-spack.yaml
+   ✅ Registered: flux_validate_batch_jobspec
    ✅ Registered: sleep_timer
    ✅ Registered: read_file
    ✅ Registered: list_directory
+   ✅ Registered: spack_list
+   ✅ Registered: spack_find
+   ✅ Registered: spack_spec
+   ✅ Registered: spack_info
+   ✅ Registered: spack_install
+   ✅ Registered: database_save
+   ✅ Registered: database_get
    ✅ Registered: flux_resource_list
    ✅ Registered: flux_validate_jobspec
    ✅ Registered: flux_submit_job
@@ -73,9 +83,11 @@ broker.info[0]: quorum-full: quorum->run 0.465563s
    ✅ Registered: flux_get_job_info
    ✅ Registered: flux_get_job_logs
    ✅ Registered: flux_sched_qmanager_stats
+   ✅ Registered: validate_jobspec_expert
+   ✅ Registered: transform_jobspec_expert
    ✅ Registered: simple_echo
    ✅ Registered: check_finished_prompt
-INFO:     Started server process [108]
+INFO:     Started server process [104]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8089 (Press CTRL+C to quit)
@@ -95,41 +107,18 @@ And discover the MCP sidecar running on the headless service:
 curl -k flux-mcp-0.flux-mcp.default.svc.cluster.local:8089/mcp
 ```
 
-You'll need to export an API key. Then we can test launching work with fractale.
+You'll need to export an API key, e.g., `GEMINI_API_KEY`. Then we can test launching work with fractale. This first example is asking to respond to a generic prompt:
 
 ```bash
-fractale prompt Run lammps on the resources you find with input files in /code. Wait until the job finishes and then get the output logs.
+fractale prompt Submit a job to tell me a joke, and ask me about the category.
 ```
 
-## 5. Expose the server
-
-Expose the service to your local machine:
+Here is an example for how to target a specific sub-agent.
 
 ```bash
-kubectl port-forward svc/mcp-server-service 8080:80
+# fractale agent <sub-agent>
+fractale agent -r ./fractale/examples/registry/analysis-agents.yaml optimize Discover resources and software installed to spack. Create an optimization agent single step with instruction to choose an application to run with flux, run, and get the logs. 
 ```
-
-Check health:
-
-```bash
-$ curl -s http://localhost:8080/health  | jq
-{
-  "status": 200,
-  "message": "OK"
-}
-```
-
-Ask for pancakes (you need fastmcp installed for this).
-
-```bash
-$ python3 get_pancakes.py 
-  ⭐ Discovered tool: pancakes_tool
-  ⭐ Discovered tool: simple_echo
-
-CallToolResult(content=[TextContent(type='text', text='Pancakes for Vanessa 🥞', annotations=None, meta=None)], structured_content={'result': 'Pancakes for Vanessa 🥞'}, meta=None, data='Pancakes for Vanessa 🥞', is_error=False)
-```
-
-Note that we can also run the server in stdio mode and then echo json RPC to it, but nah, don't really want to do that. 
 
 ## Clean Up
 
