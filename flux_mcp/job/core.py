@@ -71,6 +71,7 @@ def flux_submit_job(
 ) -> JobSubmissionResult:
     """
     Creates a Jobspec from a command and submits it to Flux.
+    If you need to get logs for this next, you should wait until the job is finished.
 
     Args:
         command: Command to execute (iterable of strings).
@@ -244,6 +245,7 @@ def flux_get_job_logs(
             - 'error' (str or None): A descriptive error message if retrieval failed.
             - 'lines' (list[str] or None): A list of strings, where each string is
                a chunk of output data captured from the job's 'guest.output' stream.
+            - 'return_code' (str or None): 0 if successful and no error.
     """
     lines = []
     start = time.time()
@@ -259,5 +261,5 @@ def flux_get_job_logs(
             if delay is not None and (now - start) > delay:
                 break
     except Exception as e:
-        return {"success": False, "error": str(e), "lines": None}
-    return {"success": True, "error": None, "lines": lines}
+        return {"success": False, "error": str(e), "lines": None, "return_code": -1}
+    return {"success": True, "error": None, "lines": lines, "return_code": 0}
