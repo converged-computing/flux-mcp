@@ -253,7 +253,17 @@ def flux_get_job_logs(
         h = get_handle(uri)
         job_id_obj = flux.job.JobID(job_id)
         # Event watch on the output stream
-        for line in flux.job.event_watch(h, job_id_obj, "guest.output"):
+        event_watch = flux.job.event_watch(h, job_id_obj, "guest.output")
+        if event_watch is None:
+            return {
+                "success": False,
+                "error": "Job not ready or does not exist",
+                "lines": None,
+                "return_code": -1,
+            }
+        for line in event_watch:
+            if not line:
+                continue
             if "data" in line.context:
                 lines.append(line.context["data"])
 

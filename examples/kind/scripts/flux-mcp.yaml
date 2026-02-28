@@ -1,7 +1,9 @@
 tools:
   - path: hpc_mcp.t.utils.sleep_timer
-  - path: hpc_mcp.t.filesystem.read_file
-  - path: hpc_mcp.t.filesystem.list_directory
+  - path: hpc_mcp.filesystem.filesystem_read_file
+  - path: hpc_mcp.filesystem.filesystem_list_directory
+  - path: hpc_mcp.filesystem.filesystem_find_directory
+  - path: hpc_mcp.filesystem.filesystem_find_file
   - path: flux_mcp.resource.flux_resource_list
   - path: flux_mcp.validate.flux_validate_jobspec
   - path: flux_mcp.job.flux_submit_job

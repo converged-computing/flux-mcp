@@ -1,0 +1,33 @@
+FROM fluxrm/flux-sched:noble
+
+USER root
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    wget \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 https://github.com/spack/spack /opt/spack && \
+    cd /opt/spack && \
+    . ./share/spack/setup-env.sh && \
+    spack install lammps && \
+    spack install cowsay
+
+WORKDIR /code
+COPY ./scripts /code/scripts
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN apt-get update && apt-get install -y python3-venv && python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN git clone https://github.com/converged-computing/fractale /code/fractale && python3 -m pip install -e /code/fractale[all] --break-system-packages
+RUN git clone https://github.com/converged-computing/hpc-mcp /code/hpc-mcp && \
+    cd /code/hpc-mcp && pip install . --break-system-packages
+RUN git clone https://github.com/converged-computing/flux-mcp /code/flux-mcp && \
+    cd /code/flux-mcp && pip install . --break-system-packages && pip install -r /code/scripts/requirements.txt --break-system-packages
+# RUN pip install flux-mcp
+ENV SHELL=/usr/bin/bash
+ENV PYTHONPATH=/usr/lib/python3.12/site-packages
+ENV PATH=$PATH:/opt/spack/bin
+RUN python3 -m pip install sqlalchemy rpds-py --break-system-packages
