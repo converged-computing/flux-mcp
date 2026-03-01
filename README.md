@@ -4,7 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/flux-mcp.svg)](https://badge.fury.io/py/flux-mcp)
 
-![img/flux-mcp-small.png](img/flux-mcp-small.png)
+![https://github.com/converged-computing/flux-mcp/raw/main/img/flux-mcp-small.png](https://github.com/converged-computing/flux-mcp/raw/main/img/flux-mcp-small.png)
 
 ## Related Projects
 
