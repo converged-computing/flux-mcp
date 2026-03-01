@@ -1,3 +1,4 @@
+import flux_mcp.command as command
 import flux_mcp.job as job
 import flux_mcp.resource as resource
 import flux_mcp.sched as sched
@@ -15,6 +16,11 @@ TOOLS = [
     job.flux_handle_delegation,
     transform.transform_jobspec,
     transform.transform_jobspec_persona,
+    # Command
+    command.flux_archive_create,
+    command.flux_archive_remove,
+    command.flux_archive_list,
+    command.flux_exec_command,
     # Job core
     job.flux_submit_job,
     job.flux_cancel_job,
