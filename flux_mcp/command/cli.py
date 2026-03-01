@@ -1,3 +1,4 @@
+import copy
 import subprocess
 from typing import Annotated, Any, Dict, List, Optional
 
@@ -17,7 +18,7 @@ def run_flux_cli(args: List[str], uri: Optional[str] = None) -> subprocess.Compl
         uri: Optional Flux URI to target a specific instance.
     """
     cmd = ["flux"]
-    environ = {}
+    environ = copy.deepcopy(dict(os.environ))
     if uri:
         environ["FLUX_URI"] = uri
     cmd.extend(args)
