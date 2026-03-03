@@ -36,7 +36,7 @@ JobInfoResult = Annotated[
 
 LogLinesResult = Annotated[
     Dict[str, Any],
-    "A dictionary containing 'success' (bool), 'error' (str or None), and 'lines' (list of strings or None).",
+    "A dictionary containing 'success' (bool), 'error' (str or None), and 'lines' (list of strings or None) and 'complete' (true/false) if the logs are complete.",
 ]
 
 
@@ -229,6 +229,8 @@ def flux_get_job_logs(
 ) -> LogLinesResult:
     """
     Retrieves the output logs (stdout/stderr) associated with a specific Flux job.
+    If you set the delay, it will cut early and you may not get a complete log.
+    If logs are not complete, you might consider waiting and trying again.
 
     This function monitors the job's event log for output events. It can either
     wait until the job finishes or stop after a specified delay.
@@ -249,6 +251,7 @@ def flux_get_job_logs(
     """
     lines = []
     start = time.time()
+    complete = False
     try:
         h = get_handle(uri)
         job_id_obj = flux.job.JobID(job_id)
@@ -261,6 +264,7 @@ def flux_get_job_logs(
                 "lines": None,
                 "return_code": -1,
             }
+        complete = True
         for line in event_watch:
             if not line:
                 continue
@@ -269,7 +273,14 @@ def flux_get_job_logs(
 
             now = time.time()
             if delay is not None and (now - start) > delay:
+                complete = False
                 break
     except Exception as e:
-        return {"success": False, "error": str(e), "lines": None, "return_code": -1}
-    return {"success": True, "error": None, "lines": lines, "return_code": 0}
+        return {
+            "success": False,
+            "error": str(e),
+            "lines": None,
+            "return_code": -1,
+            "complete": complete,
+        }
+    return {"success": True, "error": None, "lines": lines, "return_code": 0, "complete": complete}
