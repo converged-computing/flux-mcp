@@ -72,6 +72,10 @@ class Validator(BatchCmd):
         """
         Validate a batch script.
         """
+        # FLUX is not valid, FLUX: is. It can be lower or uppercase
+        if re.search("#FLUX ", content, re.IGNORECASE):
+            raise ValueError("Flux directives must be written as 'FLUX:'")
+
         # Changes are removed lines to get it to read
         batchscript, changes = self.get_directive_parser(content)
         if changes:
