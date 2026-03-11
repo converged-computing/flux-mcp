@@ -87,6 +87,10 @@ def internal_validate(content):
     errors = []
     jobspec = None
 
+    # Cut out early if the content is empty
+    if not content.strip():
+        errors.append("The provided jobspec is an empty string.")
+        return {"jobspec": jobspec, "errors": errors, "valid": not errors}
     try:
         yaml_content = yaml.safe_load(content)
         json_content = json.dumps(yaml_content)
