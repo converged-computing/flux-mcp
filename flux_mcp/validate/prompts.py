@@ -22,7 +22,7 @@ I need to validate if the following job specification is correct:
 ```
 
 ### REQUIREMENTS & CONSTRAINTS
-You MUST return a JSON structure with fields for 'valid' (bool) and a list of string 'reasons'. You MAY optionally add a field `issues` with a list of debugging or critique of any code.
+You MUST return a JSON structure with fields for 'valid' (bool) and a list of string 'reasons'. You MAY optionally add a field `issues` with a list of debugging or critique of any code. An empty jobspec is NOT valid.
 
 ### INSTRUCTIONS
 1. Analyze the provided script above.
