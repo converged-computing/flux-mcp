@@ -21,6 +21,7 @@ The desired output format is a '{fmt}' script.
 ### REQUIREMENTS & CONSTRAINTS
 You MUST not make up directives that do not exist.
 You MUST preserve as many options as possible from the original.
+You MUST give me the transformed jobspec. You MUST NOT give me text that tells me how to do it.
 
 ### INSTRUCTIONS
 1. Analyze the provided script below.
