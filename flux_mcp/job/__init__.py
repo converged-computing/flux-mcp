@@ -1,3 +1,4 @@
+from .events import FluxEvents
 from .core import (
     flux_cancel_job,
     flux_get_job_info,
