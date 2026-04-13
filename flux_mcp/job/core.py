@@ -101,13 +101,14 @@ def flux_submit_job(
     try:
         # Generate the Jobspec from the provided arguments
         jobspec = flux.job.JobspecV1.from_command(
-            command=command,
-            num_tasks=num_tasks,
-            cores_per_task=cores_per_task,
-            gpus_per_task=gpus_per_task,
-            num_nodes=num_nodes,
-            exclusive=exclusive,
+            command=utils.ensure_command(command),
+            num_tasks=utils.ensure_int(num_tasks),
+            cores_per_task=utils.ensure_int(cores_per_task),
+            gpus_per_task=utils.ensure_int(gpus_per_task),
+            num_nodes=utils.ensure_int(num_nodes),
+            exclusive=utils.ensure_bool(exclusive),
         )
+        print(jobspec)
         h = get_handle(uri)
 
         # Note that newer flux (as of 8 months ago) supports these are arguments above

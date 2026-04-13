@@ -1,4 +1,4 @@
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 AUTHOR = "Vanessa Sochat"
 AUTHOR_EMAIL = "vsoch@users.noreply.github.com"
 NAME = "flux-mcp"
