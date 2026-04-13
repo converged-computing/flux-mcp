@@ -76,7 +76,6 @@ def flux_submit_job(
     Args:
         command: Command to execute (iterable of strings).
         uri: Optional Flux URI. If not provided, uses local instance.
-        submit_async: Whether to submit the job asynchronously.
         num_tasks: Number of tasks to create.
         cores_per_task: Number of cores to allocate per task.
         gpus_per_task: Number of GPUs to allocate per task.

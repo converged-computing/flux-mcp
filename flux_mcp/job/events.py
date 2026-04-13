@@ -1,27 +1,38 @@
 import asyncio
 import uuid
+from logging import getLogger
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
 import flux
 import flux.job
-from typing import Dict, Any, Callable, Awaitable, Optional, List
-from logging import getLogger
+
 from .core import get_handle
 
 LOGGER = getLogger(__name__)
 
 # Events we ignore to reduce noise and redundancy
 SKIP_EVENTS = [
-    "submit", "validate", "depend", "priority", 
-    "annotations", "alloc", "release", "free", "finish"
+    "submit",
+    "validate",
+    "depend",
+    "priority",
+    "annotations",
+    "alloc",
+    "release",
+    "free",
+    "finish",
 ]
+
 
 class FluxJobWrapper:
     """
     Wraps a Flux Journal event and provides state-machine friendly properties.
     """
+
     def __init__(self, event_dict, handle):
         self.event = event_dict
         self.handle = handle
-        
+
         # Resolve IDs and Jobspec
         if "kvs" in self.event:
             self.jobspec = self.event["kvs"]["jobspec"]
@@ -65,14 +76,19 @@ class FluxJobWrapper:
             "status": state.get("status"),
             "return_code": state.get("returncode"),
             "is_completed": state.get("status") in ["COMPLETED", "FAILED"],
-            "is_failed": state.get("status") == "FAILED" or (state.get("returncode", 0) != 0 if state.get("status") == "COMPLETED" else False)
+            "is_failed": state.get("status") == "FAILED"
+            or (state.get("returncode", 0) != 0 if state.get("status") == "COMPLETED" else False),
         }
+
 
 class FluxEvents:
     """
     Modular Flux Event Provider for MCP Server.
     Uses JournalConsumer to stream job lifecycle events.
     """
+
+    name = "flux"
+
     def __init__(self):
         self.handle = get_handle()
         self._active_watches: Dict[str, asyncio.Task] = {}
@@ -87,23 +103,21 @@ class FluxEvents:
             "parameters": {
                 "job_name": "string (optional: filter by state machine job name)",
                 "app_name": "string (optional: filter by app/step name)",
-            }
+            },
         }
 
     async def subscribe(
-        self, 
-        params: Dict[str, Any], 
-        callback: Callable[[str, Dict[str, Any]], Awaitable[None]]
+        self, params: Dict[str, Any], callback: Callable[[str, Dict[str, Any]], Awaitable[None]]
     ) -> str:
         """
         Subscribe to events. Required for mcp-server.
         """
         sub_id = f"flux_{uuid.uuid4().hex[:8]}"
-        
+
         # Start the background polling task
         task = asyncio.create_task(self._watch_loop(sub_id, params, callback))
         self._active_watches[sub_id] = task
-        
+
         return sub_id
 
     async def unsubscribe(self, sub_id: str) -> bool:
@@ -136,7 +150,7 @@ class FluxEvents:
             while True:
                 # Use to_thread because consumer.poll is a blocking C-call
                 event = await asyncio.to_thread(consumer.poll, timeout=1.0)
-                
+
                 if not event:
                     continue
 
