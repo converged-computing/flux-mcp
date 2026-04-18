@@ -97,7 +97,7 @@ class Validator(BatchCmd):
                 if fail_fast:
                     raise ValueError(f"Invalid batch job directive {name}: {e}")
                 else:
-                    errors.append(name)
+                    errors.append(name + f": {e}")
 
         if errors:
             errors = "\n".join(errors)
