@@ -3,6 +3,7 @@
 > 🌀 Agentic MCP tools for Flux Framework
 
 [![PyPI version](https://badge.fury.io/py/flux-mcp.svg)](https://badge.fury.io/py/flux-mcp)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22239760.svg)](https://doi.org/10.5281/zenodo.22239760)
 
 ![https://github.com/converged-computing/flux-mcp/raw/main/img/flux-mcp-small.png](https://github.com/converged-computing/flux-mcp/raw/main/img/flux-mcp-small.png)
 
