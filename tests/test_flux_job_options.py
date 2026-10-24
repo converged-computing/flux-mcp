@@ -4,7 +4,13 @@ import flux
 import flux.job
 import pytest
 
-from flux_mcp.utils import ATTRIBUTES, SHELL_OPTIONS, is_settable_property
+from flux_mcp.utils import (
+    ATTRIBUTES,
+    SHELL_OPTIONS,
+    default_path,
+    is_settable_property,
+    user_environment,
+)
 
 
 def accepts(option):
@@ -23,11 +29,15 @@ async def call(client, tool, arguments):
 
 
 @pytest.mark.asyncio
-async def test_environment_inherited_by_default(client):
+async def test_default_environment_is_user_environment(client):
     job = await call(client, "flux_submit_job", {"command": ["env"]})
     logs = await call(client, "flux_get_job_logs", {"job_id": job["job_id"]})
-    names = {line.split("=", 1)[0] for line in "".join(logs["lines"]).splitlines() if "=" in line}
-    assert {"PATH", "HOME"} <= names
+    lines = "".join(logs["lines"]).splitlines()
+    env = dict(line.split("=", 1) for line in lines if "=" in line)
+    expected = user_environment()
+    for name in ("HOME", "USER", "LOGNAME", "SHELL"):
+        assert env[name] == expected[name]
+    assert env["PATH"].startswith(default_path())
 
 
 @pytest.mark.asyncio

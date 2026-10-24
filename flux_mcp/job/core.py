@@ -82,7 +82,8 @@ def flux_submit_job(
         num_nodes: Distribute allocated tasks across N individual nodes.
         exclusive: Always allocate nodes exclusively.
         duration: Time limit in Flux Standard Duration (str), seconds (int/float), or timedelta.
-        environment: Mapping of environment variables for the job.
+        environment: Mapping of environment variables for the job. Defaults to a minimal
+            user environment (HOME, USER, LOGNAME, SHELL, PATH).
         env_expand: Mapping of environment variables containing mustache templates.
         cwd: Set the current working directory for the job.
         rlimits: Mapping of process resource limits (e.g. {"nofile": 12000}).
@@ -101,8 +102,9 @@ def flux_submit_job(
     try:
         options = {
             "duration": duration,
-            # Match flux submit, which passes the caller's environment on every Flux version.
-            "environment": dict(os.environ) if environment is None else environment,
+            # Use the environment the caller gives, else a minimal user environment;
+            # never the server's own environment.
+            "environment": utils.user_environment() if environment is None else environment,
             "env_expand": env_expand,
             "cwd": cwd,
             "rlimits": rlimits,

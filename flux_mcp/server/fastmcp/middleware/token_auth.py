@@ -1,3 +1,4 @@
+import hmac
 import re
 from typing import Callable
 
@@ -19,11 +20,24 @@ class TokenAuthMiddleware(Middleware):
         self.static_token = static_token
         self.header_name = header_name
 
+    @staticmethod
+    def parse_token(value: str) -> str:
+        """
+        Return the token from an Authorization header value.
+        """
+        value = value.strip()
+        scheme, _, rest = value.partition(" ")
+        if scheme.lower() == "bearer" and rest:
+            return rest.strip()
+        # Also accept "Bearer:<token>", "Basic:<token>", or the bare token.
+        return re.sub(r"^(bearer|basic):", "", value, flags=re.IGNORECASE)
+
     async def __call__(self, request: Request, call_next: Callable):
         """
         Check the header (auth) on a request.
         """
-        headers = get_http_headers()
+        # get_http_headers drops credential headers unless asked for them.
+        headers = get_http_headers(include={self.header_name})
         auth_header = headers.get(self.header_name)
 
         if not auth_header:
@@ -32,11 +46,8 @@ class TokenAuthMiddleware(Middleware):
                 detail="Authentication header missing",
             )
 
-        # In case they added Bearer or Basic
-        for string in ["earer", "asic"]:
-            auth_header = re.sub(f"(B|b){string}:", "", auth_header)
-
-        if auth_header != self.static_token:
+        token = self.parse_token(auth_header)
+        if not hmac.compare_digest(token.encode(), self.static_token.encode()):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid authentication token",

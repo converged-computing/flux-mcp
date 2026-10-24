@@ -1,19 +1,6 @@
 import os
 import sys
 
-# Jobs inherit the server environment, and the server does not need agent credentials.
-DEFAULT_UNSET = [
-    "ANTHROPIC_API_KEY",
-    "OPENAI_API_KEY",
-    "CODEX_API_KEY",
-    "GOOGLE_API_KEY",
-    "GEMINI_API_KEY",
-    "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_SESSION_TOKEN",
-    "AWS_BEARER_TOKEN_BEDROCK",
-]
-
 REEXEC = "FLUX_MCP_STDIO_REEXEC"
 
 
@@ -57,21 +44,12 @@ def check_instance():
         fail(f"instance at {uri} is owned by uid {owner}, not {os.getuid()}")
 
 
-def scrub_environment():
-    """Remove agent credentials (or FLUX_MCP_UNSET names) from the environment."""
-    names = os.environ.get("FLUX_MCP_UNSET")
-    for name in names.split() if names is not None else DEFAULT_UNSET:
-        os.environ.pop(name, None)
-    os.environ.pop(REEXEC, None)
-
-
 def main():
     """Run the flux-mcp stdio server for the Flux instance in FLUX_URI."""
     if not os.environ.get("FLUX_URI"):
         fail("FLUX_URI not set; start the agent inside your allocation")
     ensure_flux_bindings()
     check_instance()
-    scrub_environment()
 
     from flux_mcp.server.__main__ import main as serve
 

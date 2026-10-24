@@ -104,30 +104,25 @@ def test_refuses_without_flux_on_path(shadowed_flux):
     assert "flux not on PATH" in proc.stderr
 
 
-def test_scrub_removes_default_credentials(monkeypatch):
-    monkeypatch.delenv("FLUX_MCP_UNSET", raising=False)
-    for name in stdio.DEFAULT_UNSET:
-        monkeypatch.setenv(name, "secret")
-    monkeypatch.setenv("KEEP_ME", "1")
-    stdio.scrub_environment()
-    assert not set(stdio.DEFAULT_UNSET) & set(os.environ)
-    assert os.environ["KEEP_ME"] == "1"
-
-
-def test_scrub_list_can_be_replaced(monkeypatch):
-    monkeypatch.setenv("FLUX_MCP_UNSET", "KEEP_ME")
-    monkeypatch.setenv("KEEP_ME", "1")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "secret")
-    stdio.scrub_environment()
-    assert "KEEP_ME" not in os.environ
-    assert os.environ["ANTHROPIC_API_KEY"] == "secret"
-
-
-def test_jobs_inherit_environment_without_credentials():
+def test_jobs_get_user_environment_not_server_environment():
     env = dict(os.environ, MY_MODULE_VAR="1", ANTHROPIC_API_KEY="x", AWS_SECRET_ACCESS_KEY="y")
     names = job_environment(env)
-    assert {"MY_MODULE_VAR", "PATH"} <= names
-    assert not names & {"ANTHROPIC_API_KEY", "AWS_SECRET_ACCESS_KEY", stdio.REEXEC}
+    assert {"HOME", "USER", "LOGNAME", "SHELL", "PATH"} <= names
+    assert not names & {"MY_MODULE_VAR", "ANTHROPIC_API_KEY", "AWS_SECRET_ACCESS_KEY", stdio.REEXEC}
+
+
+def test_flux_exec_gets_user_environment_not_server_environment():
+    env = dict(os.environ, MY_MODULE_VAR="1", ANTHROPIC_API_KEY="x")
+
+    async def run(s):
+        result = await s.call_tool("flux_exec_command", {"command": ["env"], "ranks": "0"})
+        return json.loads(result.content[0].text)
+
+    result = session(env, run)
+    assert result["success"], result
+    names = {line.split("=", 1)[0] for line in result["stdout"].splitlines() if "=" in line}
+    assert {"HOME", "USER", "PATH", "FLUX_URI"} <= names
+    assert not names & {"MY_MODULE_VAR", "ANTHROPIC_API_KEY", stdio.REEXEC}
 
 
 def test_jobs_without_credentials_after_reexec(shadowed_flux):

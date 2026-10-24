@@ -59,7 +59,9 @@ flux python -m venv ~/.flux-mcp/venv
 ~/.flux-mcp/venv/bin/flux-mcp-stdio
 ```
 
-It exits with an error if `FLUX_URI` is unset (rather than falling back to the system instance). If the Flux Python bindings are not importable, it re-runs itself under `flux env`. Jobs inherit the server environment, as with `flux submit`, so agent credentials (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, AWS keys, and similar) are removed first. Set `FLUX_MCP_UNSET="VAR1 VAR2"` to replace that list.
+It exits with an error if `FLUX_URI` is unset (rather than falling back to the system instance). If the Flux Python bindings are not importable, it re-runs itself under `flux env`.
+
+Jobs never receive the server environment. A job gets exactly the `environment` the agent passes, or else a minimal user environment: `HOME`, `USER`, `LOGNAME` and `SHELL` from the password database, and the login `PATH` (`ENV_PATH` in `/etc/login.defs`) plus the directory containing `flux`. Commands run with `flux exec` get the same minimal environment.
 
 ### Docker
 

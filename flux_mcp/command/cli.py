@@ -1,7 +1,9 @@
-import copy
 import os
+import shutil
 import subprocess
 from typing import Annotated, Any, Dict, List, Optional
+
+import flux_mcp.utils as utils
 
 FluxCommandResult = Annotated[
     Dict[str, Any],
@@ -18,10 +20,13 @@ def run_flux_cli(args: List[str], uri: Optional[str] = None) -> subprocess.Compl
         args: List of command arguments (e.g., ['exec', '-r', '0', 'hostname']).
         uri: Optional Flux URI to target a specific instance.
     """
-    cmd = ["flux"]
-    environ = copy.deepcopy(dict(os.environ))
-    if uri:
-        environ["FLUX_URI"] = uri
+    cmd = [shutil.which("flux") or "flux"]
+
+    # flux exec passes its environment to the remote commands, so give it the
+    # user environment rather than the server's.
+    environ = utils.user_environment()
+    if uri or os.environ.get("FLUX_URI"):
+        environ["FLUX_URI"] = uri or os.environ["FLUX_URI"]
     cmd.extend(args)
 
     return subprocess.run(cmd, env=environ, capture_output=True, text=True, check=False)
