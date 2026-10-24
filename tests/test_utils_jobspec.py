@@ -3,7 +3,7 @@ import inspect
 import flux.job
 import pytest
 
-from flux_mcp.utils import apply_jobspec_options
+from flux_mcp.utils import apply_jobspec_options, flux_version
 
 COMMAND = {"command": ["true"], "num_tasks": 2}
 ENV = {"PATH": "/usr/bin:/bin"}
@@ -93,3 +93,44 @@ def test_shell_and_attribute_options():
 def test_mapping_options_must_be_mappings(option):
     with pytest.raises(ValueError, match="must be a mapping"):
         apply_jobspec_options(Recorder(), {option: ["not", "a", "mapping"]})
+
+
+class Handle:
+    """A Flux handle stand-in that reports a version attribute."""
+
+    def __init__(self, version):
+        self.version = version
+
+    def attr_get(self, name):
+        assert name == "version"
+        return self.version
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [("0.89.0-124-g11c9d4c0f", (0, 89, 0)), ("0.70.0", (0, 70, 0)), ("1.2.3rc1", (1, 2, 3))],
+)
+def test_flux_version(value, expected):
+    assert flux_version(Handle(value)) == expected
+
+
+@pytest.mark.parametrize(
+    "version,applied",
+    [((0, 69, 0), False), ((0, 70, 0), True), ((0, 89, 0), True), (None, True)],
+    ids=["0.69", "0.70", "0.89", "unknown"],
+)
+def test_env_expand_needs_flux_0_70(version, applied):
+    recorder = Recorder()
+    result = apply_jobspec_options(recorder, {"env_expand": {"X": "y"}}, version)
+    if applied:
+        assert result == []
+        assert recorder.calls == [("shell", "env-expand", {"X": "y"})]
+    else:
+        assert result == ["env_expand"]
+        assert recorder.calls == []
+
+
+def test_rlimits_not_version_gated():
+    recorder = Recorder()
+    assert apply_jobspec_options(recorder, {"rlimits": {"nofile": 1}}, (0, 64, 0)) == []
+    assert recorder.calls == [("shell", "rlimit", {"nofile": 1})]

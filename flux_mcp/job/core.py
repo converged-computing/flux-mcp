@@ -127,10 +127,10 @@ def flux_submit_job(
             num_nodes=num_nodes,
             exclusive=exclusive,
         )
-        unsupported = utils.apply_jobspec_options(jobspec, options)
+        h = get_handle(uri)
+        unsupported = utils.apply_jobspec_options(jobspec, options, utils.flux_version(h))
         if unsupported:
             raise ValueError(f"This Flux version does not support: {', '.join(unsupported)}")
-        h = get_handle(uri)
         jobid = flux.job.submit(h, jobspec)
         return {"success": True, "error": None, "job_id": int(jobid), "uri": uri or "local"}
 
