@@ -6,8 +6,10 @@ import pytest
 
 from flux_mcp.utils import (
     ATTRIBUTES,
+    SHELL_OPTION_MIN_VERSION,
     SHELL_OPTIONS,
     default_path,
+    flux_version,
     is_settable_property,
     user_environment,
 )
@@ -74,6 +76,10 @@ async def test_env_expand_reaches_each_task(client):
             "env_expand": {"X": "r{{task.rank}}"},
         },
     )
+    if flux_version(flux.Flux()) < SHELL_OPTION_MIN_VERSION["env-expand"]:
+        assert job["success"] is False
+        assert "env_expand" in job["error"]
+        return
     assert job["success"] is True, job["error"]
     logs = await call(client, "flux_get_job_logs", {"job_id": job["job_id"]})
     assert sorted(logs["lines"]) == ["r0\n", "r1\n"]
