@@ -1,3 +1,55 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flux-mcp"
+dynamic = ["version"]
+description = "Agentic MCP tools for Flux Framework and HPC"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.10"
+authors = [{ name = "Vanessa Sochat", email = "vsoch@users.noreply.github.com" }]
+maintainers = [{ name = "Vanessa Sochat", email = "vsoch@users.noreply.github.com" }]
+keywords = ["mcp", "model context protocol", "flux", "flux framework", "hpc", "scheduling", "workloads"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: C",
+    "Programming Language :: Python",
+    "Topic :: Software Development",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    # The servers use mcp.server.mcpserver (mcp 2.x) and the fastmcp 4.x API.
+    "mcp>=2",
+    "fastmcp>=4",
+    "rich",
+    "fastapi",
+    "pyyaml",
+    "ply",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=4.6.2", "pytest-asyncio"]
+all = ["pytest>=4.6.2", "pytest-asyncio"]
+
+[project.urls]
+Homepage = "https://github.com/converged-computing/flux-mcp"
+
+[project.scripts]
+flux-mcp = "flux_mcp.server.fastmcp.__main__:main"
+flux-mcp-stdio = "flux_mcp.server.stdio:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "flux_mcp.version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["flux_mcp*"]
+
 [tool.black]
 exclude = "^env/"
 line-length = 100
