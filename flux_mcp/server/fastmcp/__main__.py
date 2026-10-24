@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 from fastapi import FastAPI
-from fastmcp.tools.tool import Tool
+from fastmcp.tools import Tool
 
 from flux_mcp.registry import TOOLS
+from flux_mcp.server.threads import run_in_thread
 
 from .app import init_mcp
 
 
 def register_with(server_instance):
     for func in TOOLS:
-        tool_obj = Tool.from_function(func)
+        tool_obj = Tool.from_function(run_in_thread(func))
         server_instance.add_tool(tool_obj)
         print(f"   ✅ Registered: {func.__name__}")
 

@@ -76,7 +76,6 @@ def flux_submit_job(
     Args:
         command: Command to execute (iterable of strings).
         uri: Optional Flux URI. If not provided, uses local instance.
-        submit_async: Whether to submit the job asynchronously.
         num_tasks: Number of tasks to create.
         cores_per_task: Number of cores to allocate per task.
         gpus_per_task: Number of GPUs to allocate per task.
@@ -100,7 +99,24 @@ def flux_submit_job(
         Dictionary containing the success status and Job ID or error message.
     """
     try:
-        # Generate the Jobspec from the provided arguments
+        options = {
+            "duration": duration,
+            # Match flux submit, which passes the caller's environment on every Flux version.
+            "environment": dict(os.environ) if environment is None else environment,
+            "env_expand": env_expand,
+            "cwd": cwd,
+            "rlimits": rlimits,
+            "name": name,
+            "input": input,
+            "output": output,
+            "error": error,
+            "label_io": label_io,
+            "unbuffered": unbuffered,
+            "queue": queue,
+            "bank": bank,
+        }
+        # Older Flux has no from_command arguments for these options, so build the
+        # jobspec first and apply them the way newer Flux does internally.
         jobspec = flux.job.JobspecV1.from_command(
             command=command,
             num_tasks=num_tasks,
@@ -109,36 +125,10 @@ def flux_submit_job(
             num_nodes=num_nodes,
             exclusive=exclusive,
         )
+        unsupported = utils.apply_jobspec_options(jobspec, options)
+        if unsupported:
+            raise ValueError(f"This Flux version does not support: {', '.join(unsupported)}")
         h = get_handle(uri)
-
-        # Note that newer flux (as of 8 months ago) supports these are arguments above
-        if environment is not None:
-            jobspec.environment = environment
-        if duration is not None:
-            jobspec.duration = duration
-        if cwd is not None:
-            jobspec.cwd = cwd
-        if env_expand is not None:
-            jobspec.env_expand = env_expand
-        if rlimits is not None:
-            jobspec.rlimits = rliits
-        if input is not None:
-            jobspec.input = input
-        if output is not None:
-            jobspec.output = output
-        if error is not None:
-            jobspec.error = error
-        if queue is not None:
-            jobspec.queue = queue
-        if bank is not None:
-            jobspec.bank = bank
-        if unbuffered is not None:
-            jobspec.unbuffered = unbuffered
-        if label_io is not None:
-            jobspec.label_io = label_io
-        if name is not None:
-            jobspec.name = name
-
         jobid = flux.job.submit(h, jobspec)
         return {"success": True, "error": None, "job_id": int(jobid), "uri": uri or "local"}
 
@@ -229,8 +219,9 @@ def flux_get_job_logs(
 ) -> LogLinesResult:
     """
     Retrieves the output logs (stdout/stderr) associated with a specific Flux job.
-    If you set the delay, it will cut early and you may not get a complete log.
-    If logs are not complete, you might consider waiting and trying again.
+    Waits for the job to start if it has not yet. If you set the delay, it will cut
+    early and you may not get a complete log. If logs are not complete, you might
+    consider waiting and trying again.
 
     This function monitors the job's event log for output events. It can either
     wait until the job finishes or stop after a specified delay.
@@ -238,7 +229,7 @@ def flux_get_job_logs(
     Args:
         job_id: The unique identifier of the job (integer or f58 string).
         uri: Optional Flux handle URI. If omitted, connects to the local instance.
-        delay: The maximum time in seconds to spend collecting logs. If None,
+        delay: The maximum total time in seconds to spend collecting logs. If None,
                the function blocks until the job event stream is closed.
 
     Returns:
@@ -248,39 +239,53 @@ def flux_get_job_logs(
             - 'lines' (list[str] or None): A list of strings, where each string is
                a chunk of output data captured from the job's 'guest.output' stream.
             - 'return_code' (str or None): 0 if successful and no error.
+            - 'complete' (bool): True if the output stream ended.
     """
     lines = []
-    start = time.time()
-    complete = False
+    deadline = None if delay is None else time.monotonic() + delay
+    watcher = None
     try:
         h = get_handle(uri)
-        job_id_obj = flux.job.JobID(job_id)
-        # Event watch on the output stream
-        event_watch = flux.job.event_watch(h, job_id_obj, "guest.output")
-        if event_watch is None:
+        jobid = flux.job.JobID(job_id)
+
+        # As in flux.job.output.job_output: guest.output is ready after shell.init.
+        watcher = flux.job.event_watch_async(h, jobid, "guest.exec.eventlog")
+        if utils.next_event(watcher, deadline, "shell.init") is None:
+            reason = utils.fatal_exception(h, jobid)
             return {
                 "success": False,
-                "error": "Job not ready or does not exist",
-                "lines": None,
+                "error": f"Job {job_id} never started" + (f": {reason}" if reason else ""),
+                "lines": [],
                 "return_code": -1,
+                "complete": True,
             }
-        complete = True
-        for line in event_watch:
-            if not line:
-                continue
-            if "data" in line.context:
-                lines.append(line.context["data"])
+        watcher.cancel()
 
-            now = time.time()
-            if delay is not None and (now - start) > delay:
-                complete = False
+        watcher = flux.job.event_watch_async(h, jobid, "guest.output")
+        while True:
+            event = utils.next_event(watcher, deadline)
+            if event is None:
                 break
+            if "data" in event.context:
+                lines.append(event.context["data"])
+
+    except TimeoutError:
+        watcher.cancel()
+        return {"success": True, "error": None, "lines": lines, "return_code": 0, "complete": False}
+    except FileNotFoundError:
+        return {
+            "success": False,
+            "error": f"Job {job_id} not found.",
+            "lines": None,
+            "return_code": -1,
+            "complete": False,
+        }
     except Exception as e:
         return {
             "success": False,
             "error": str(e),
             "lines": None,
             "return_code": -1,
-            "complete": complete,
+            "complete": False,
         }
-    return {"success": True, "error": None, "lines": lines, "return_code": 0, "complete": complete}
+    return {"success": True, "error": None, "lines": lines, "return_code": 0, "complete": True}

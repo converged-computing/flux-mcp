@@ -27,7 +27,7 @@ mcp = FastMCP(
     version=version.__version__,
     icons=icons,
     # Throw up if we accidentally define a tool with the same name
-    on_duplicate_tools="error",
+    on_duplicate="error",
 )
 
 # Authentication - let's do simple BearerToken from environment for now
@@ -45,7 +45,9 @@ def init_mcp(exclude_tags=None, include_tags=None, mask_error_details=False):
     """
     global mcp
 
-    mcp.exclude_tags = set(exclude_tags or []) or None
-    mcp.include_tags = set(include_tags or []) or None
+    if exclude_tags:
+        mcp.disable(tags=set(exclude_tags))
+    if include_tags:
+        mcp.enable(tags=set(include_tags), only=True)
     mcp.mask_error_details = mask_error_details
     return mcp

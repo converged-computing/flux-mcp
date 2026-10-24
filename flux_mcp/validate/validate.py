@@ -103,6 +103,38 @@ class Validator(BatchCmd):
             errors = "\n".join(errors)
             raise ValueError(f"Validation failed at directives:\n{errors}")
 
+    def update_jobspec(self, js, key, value, not_handled):
+        """
+        Set the JobSpec field for one parsed flux batch option; record it in
+        not_handled if there is no equivalent field.
+        """
+        fields = {
+            "nodes": ("num_nodes", int),
+            "nslots": ("num_tasks", int),
+            "cores_per_slot": ("cpus_per_task", int),
+            "gpus_per_slot": ("gpus_per_task", int),
+            "time_limit": ("wall_time", parse_time_to_seconds),
+            "job_name": ("job_name", str),
+            "queue": ("queue", str),
+            "bank": ("account", str),
+            "exclusive": ("exclusive_access", bool),
+            "cwd": ("working_directory", str),
+            "input": ("input_file", str),
+            "output": ("output_file", str),
+            "error": ("error_file", str),
+        }
+        if key == "env":
+            for item in value:
+                name, _, setting = item.partition("=")
+                js.environment[name] = setting
+            return js, True
+        if key not in fields:
+            not_handled.add(key)
+            return js, False
+        name, convert = fields[key]
+        setattr(js, name, convert(value))
+        return js, True
+
     def parse_argument_delta(self, args):
         """
         Get a single parsed arg by looking at the parser delta.
@@ -139,7 +171,7 @@ class Validator(BatchCmd):
         # (circular import here)
         from flux_mcp.transformer.common import JobSpec
 
-        js = JobSpec(arguments=script)
+        js = JobSpec(arguments=script, script=script)
 
         # Not parsed yet in flux:
         #   1. input_file (Not sure what this is)

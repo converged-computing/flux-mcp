@@ -6,7 +6,8 @@ from flux_mcp.validate.validate import Validator
 class FluxScript(Script):
     def __init__(self):
         self.script_lines = ["#!/bin/bash"]
-        self.directive = "#FLUX"
+        # flux batch only reads directives written as "#FLUX:" (any case).
+        self.directive = "#FLUX:"
 
 
 def priority_to_flux_priority(class_name):
@@ -85,7 +86,8 @@ class FluxTransformer(TransformerBase):
         script.add("job-name", job_name)
 
         # Resource Directives
-        script.add("N", spec.num_nodes if spec.num_nodes > 1 else None)
+        # flux batch requires a node or slot count, so always give the nodes.
+        script.add("N", spec.num_nodes)
         script.add("n", spec.num_tasks if spec.num_tasks > 1 else None)
         script.add("c", spec.cpus_per_task if spec.cpus_per_task > 1 else None)
         script.add("gpus-per-task", spec.gpus_per_task if spec.gpus_per_task > 0 else None)
@@ -99,8 +101,8 @@ class FluxTransformer(TransformerBase):
             script.add_flag("exclusive")
         script.add("queue", spec.queue)
 
-        # Flux's -t flag accepts wall time in seconds directly.
-        script.add("t", spec.wall_time)
+        # A bare number for -t is minutes in Flux, so give the unit.
+        script.add("t", f"{spec.wall_time}s" if spec.wall_time else None)
 
         flux_prio = priority_to_flux_priority(spec.priority)
         if flux_prio != 16:
