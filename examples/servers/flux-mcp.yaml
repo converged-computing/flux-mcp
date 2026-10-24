@@ -1,0 +1,9 @@
+tools:
+  - path: flux_mcp.resource.flux_resource_list
+  - path: flux_mcp.validate.flux_validate_jobspec
+  - path: flux_mcp.validate.flux_count_jobspec_resources
+  - path: flux_mcp.job.flux_submit_job
+  - path: flux_mcp.job.flux_submit_jobspec
+  - path: flux_mcp.job.flux_get_job_info
+  - path: flux_mcp.job.flux_get_job_logs
+  - path: flux_mcp.job.flux_cancel_job
