@@ -38,7 +38,7 @@ if auth_token:
     mcp.add_middleware(auth)
 
 
-def init_mcp(exclude_tags=None, include_tags=None, mask_error_details=False):
+def init_mcp(exclude_tags=None, include_tags=None):
     """
     Function to init app. Doesn't need to be called at start as long as called
     to update global context.
@@ -49,5 +49,4 @@ def init_mcp(exclude_tags=None, include_tags=None, mask_error_details=False):
         mcp.disable(tags=set(exclude_tags))
     if include_tags:
         mcp.enable(tags=set(include_tags), only=True)
-    mcp.mask_error_details = mask_error_details
     return mcp

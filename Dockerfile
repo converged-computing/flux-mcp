@@ -14,7 +14,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /code
 COPY . /code
-RUN python3 -m pip install mcp-serve --no-cache-dir --break-system-packages && python3 -m pip install . --no-cache-dir --break-system-packages
+# mcp-serve imports httpx without declaring it as a dependency.
+RUN python3 -m pip install mcp-serve httpx --no-cache-dir --break-system-packages && python3 -m pip install . --no-cache-dir --break-system-packages
 EXPOSE 8089
 ENTRYPOINT ["mcpserver", "start"]
 
