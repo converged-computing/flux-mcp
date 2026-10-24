@@ -48,6 +48,19 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVe
 python3 -m flux_mcp.server.fastmcp
 ```
 
+### Agents (stdio)
+
+`flux-mcp-stdio` runs the stdio server for agents (Claude Code, Codex, Google ADK, AWS Strands, and others) that you start inside a Flux instance you own:
+
+```bash
+flux python -m venv ~/.flux-mcp/venv
+~/.flux-mcp/venv/bin/pip install flux-mcp
+# then point your agent at:
+~/.flux-mcp/venv/bin/flux-mcp-stdio
+```
+
+It exits with an error if `FLUX_URI` is unset (rather than falling back to the system instance). If the Flux Python bindings are not importable, it re-runs itself under `flux env`. Jobs inherit the server environment, as with `flux submit`, so agent credentials (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, AWS keys, and similar) are removed first. Set `FLUX_MCP_UNSET="VAR1 VAR2"` to replace that list.
+
 ### Docker
 
 We have a provided [Dockerfile](Dockerfile) that builds and includes [mcp-server](https://github.com/converged-computing/mcp-server) to provide the basic set of Flux endpoints (submit, info, cancel, etc) via the configuration file [flux-mcp.yaml](examples/servers/flux-mcp.yaml). You can tweak that file and build, or just use from our GitHub packages registry.
@@ -95,6 +108,12 @@ pytest -xs tests/test_flux_sched.py
 pytest -xs tests/test_*.py
 ```
 
+To run the whole suite the way CI does (starts the HTTP server inside a test instance):
+
+```bash
+flux start --test-size=2 tests/run-in-flux.sh -v --ignore=tests/test_flux_sched.py tests
+```
+
 ### Tools
 
 Tools to add:
@@ -122,9 +141,6 @@ Tools to add:
     - [x] local flux URI
     - [x] translation (the transformers?)
 
-## TODO
-
-- Add annotated descriptions to all functions for LLM.
 
 ## License
 

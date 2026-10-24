@@ -1,0 +1,41 @@
+name: test flux-mcp
+
+on:
+  pull_request: {}
+  push:
+    branches:
+    - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (fluxrm/flux-sched:noble)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: fluxrm/flux-sched:noble
+      # The image user is fluxuser; setup needs root. Tests run as fluxuser below.
+      options: --user root
+    steps:
+    - uses: actions/checkout@v4
+
+    # pip cannot upgrade Debian's python3-zipp and python3-typing-extensions.
+    - name: Install dependencies
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends python3-pip
+        apt-get remove -y python3-zipp python3-typing-extensions
+        python3 -m pip install --break-system-packages . pytest pytest-asyncio pytest-timeout
+
+    # test_flux_sched.py needs the flux_sched Python bindings, which the image does not include.
+    - name: Run tests
+      run: |
+        su fluxuser -c "cd '$GITHUB_WORKSPACE' && flux start --test-size=2 tests/run-in-flux.sh \
+          -v --timeout=120 -p no:cacheprovider --ignore=tests/test_flux_sched.py tests"

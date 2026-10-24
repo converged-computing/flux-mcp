@@ -1,5 +1,6 @@
 import asyncio
 import json
+import subprocess
 
 import pytest
 import yaml
@@ -26,11 +27,17 @@ def yaml_spec(valid_spec_dict):
 
 @pytest.mark.asyncio
 async def test_flux_resource_list(client):
-    """Verifies inventory tool (flux_ prefix) sees your 1-node/8-core setup."""
+    """Verifies the inventory tool reports the resources of the running instance."""
     result = await client.call_tool("flux_resource_list", {})
     data = json.loads(result.content[0].text)
-    assert data["free"]["nodes"] == 1
-    assert data["free"]["cores"] == 8
+    expected = subprocess.check_output(
+        ["flux", "resource", "list", "-s", "up", "-no", "{nnodes} {ncores}"], text=True
+    )
+    nodes, cores = (int(n) for n in expected.split())
+    assert data["up"]["nodes"] == nodes
+    assert data["up"]["cores"] == cores
+    assert data["free"]["nodes"] <= nodes
+    assert data["free"]["cores"] <= cores
     print(f"\nInventory Verified: {data['free']['cores']} cores free.")
 
 

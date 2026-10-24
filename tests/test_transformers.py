@@ -1,7 +1,11 @@
 import itertools
 import json
+import subprocess
+import tempfile
 
 import pytest
+
+from flux_mcp.validate.validate import Validator
 
 
 @pytest.fixture
@@ -12,8 +16,8 @@ def batch_scripts_matrix():
     """
     return {
         "flux": """#!/bin/bash
-#FLUX -N 2
-#FLUX -t 60m
+#FLUX: -N 2
+#FLUX: -t 60m
 echo "hello world"
 """,
         "slurm": """#!/bin/bash
@@ -139,3 +143,90 @@ async def test_transform_auto_detect(client, batch_scripts_matrix):
 
     if failures:
         pytest.fail(f"Auto-detection Failures:\n" + "\n".join(failures))
+
+
+# Duration (seconds) each matrix script asks for; the Kubernetes Job sets none.
+EXPECTED_DURATION = {
+    "flux": 3600,
+    "slurm": 3600,
+    "pbs": 3600,
+    "lsf": 3600,
+    "cobalt": 3600,
+    "oar": 3600,
+    "kubernetes": 0,
+}
+
+# These parsers do not read the time limit yet.
+TIME_NOT_PARSED = {"pbs", "lsf", "cobalt", "oar"}
+
+
+def flux_batch_jobspec(script):
+    """Return the jobspec flux batch would submit for a batch script."""
+    with tempfile.NamedTemporaryFile("w", suffix=".sh") as handle:
+        handle.write(script)
+        handle.flush()
+        proc = subprocess.run(
+            ["flux", "batch", "--dry-run", handle.name], capture_output=True, text=True
+        )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+async def transform(client, script, src_fmt, dest_fmt):
+    """Transform a batch script and return the rendered result."""
+    result = await client.call_tool(
+        "transform_jobspec",
+        {"batch_job": script, "to_format": dest_fmt, "from_format": src_fmt},
+    )
+    data = json.loads(result.content[0].text)
+    assert data["status"] == "SUCCESS", data.get("error")
+    return data["jobspec"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("src_fmt", list(EXPECTED_DURATION))
+async def test_flux_output_accepted_by_flux_batch(client, batch_scripts_matrix, src_fmt):
+    script = await transform(client, batch_scripts_matrix[src_fmt], src_fmt, "flux")
+    flux_batch_jobspec(script)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "src_fmt",
+    [
+        (
+            pytest.param(fmt, marks=pytest.mark.xfail(strict=True, reason="time limit not parsed"))
+            if fmt in TIME_NOT_PARSED
+            else fmt
+        )
+        for fmt in EXPECTED_DURATION
+    ],
+)
+async def test_flux_output_keeps_time_limit(client, batch_scripts_matrix, src_fmt):
+    script = await transform(client, batch_scripts_matrix[src_fmt], src_fmt, "flux")
+    jobspec = flux_batch_jobspec(script)
+    assert jobspec["attributes"]["system"]["duration"] == EXPECTED_DURATION[src_fmt]
+
+
+@pytest.mark.asyncio
+async def test_flux_to_slurm_keeps_resources_and_command(client, batch_scripts_matrix):
+    script = await transform(client, batch_scripts_matrix["flux"], "flux", "slurm")
+    for line in ["#SBATCH --nodes=2", "#SBATCH --time=01:00:00", 'echo "hello world"']:
+        assert line in script.splitlines()
+
+
+def test_flux_directives_map_to_jobspec(tmp_path):
+    script = (
+        "#!/bin/bash\n#FLUX: -N 2\n#FLUX: -n 4\n#FLUX: -c 2\n#FLUX: -t 1h\n"
+        "#FLUX: --job-name=demo\n#FLUX: -q batch\n#FLUX: --env=A=1\n#FLUX: --urgency=20\n"
+        "echo hi\n"
+    )
+    path = tmp_path / "job.sh"
+    path.write_text(script)
+    validator = Validator("batch")
+    js = validator.parse(str(path))
+    assert (js.num_nodes, js.num_tasks, js.cpus_per_task) == (2, 4, 2)
+    assert (js.wall_time, js.job_name, js.queue) == (3600, "demo", "batch")
+    assert js.environment == {"A": "1"}
+    assert js.script == ["echo hi"]
+    assert validator.unhandled(str(path)) == {"urgency"}

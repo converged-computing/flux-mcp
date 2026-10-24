@@ -19,7 +19,9 @@ def get_reqs(lookup=None, key="INSTALL_REQUIRES"):
     for module in lookup[key]:
         module_name = module[0]
         module_meta = module[1]
-        if "exact_version" in module_meta:
+        if "spec" in module_meta:
+            dependency = "%s%s" % (module_name, module_meta["spec"])
+        elif "exact_version" in module_meta:
             dependency = "%s==%s" % (module_name, module_meta["exact_version"])
         elif "min_version" in module_meta:
             if module_meta["min_version"] is None:
@@ -95,5 +97,10 @@ if __name__ == "__main__":
             "Operating System :: Unix",
             "Programming Language :: Python :: 3.11",
         ],
-        entry_points={"console_scripts": ["flux-mcp=flux_mcp.server.fastmcp.__main__:main"]},
+        entry_points={
+            "console_scripts": [
+                "flux-mcp=flux_mcp.server.fastmcp.__main__:main",
+                "flux-mcp-stdio=flux_mcp.server.stdio:main",
+            ]
+        },
     )
