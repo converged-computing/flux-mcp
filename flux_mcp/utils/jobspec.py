@@ -28,8 +28,8 @@ def flux_version(handle):
 
 def apply_jobspec_options(jobspec, options, version=None):
     """
-    Apply submit options to a jobspec as newer Flux does; return the names it
-    cannot set, including shell options the instance's job shell (version) ignores.
+    Apply submit options to a jobspec as newer Flux does. Return the names it
+    cannot set, including shell options the job shell of this version ignores.
     """
     unsupported = []
     for key, value in options.items():

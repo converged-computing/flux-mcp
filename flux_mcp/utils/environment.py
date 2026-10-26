@@ -7,8 +7,8 @@ LOGIN_DEFS = "/etc/login.defs"
 
 def default_path(uid=None, login_defs=LOGIN_DEFS):
     """
-    Return the PATH login(1) gives a user: ENV_PATH (ENV_SUPATH for root) in
-    login.defs, else the POSIX CS_PATH.
+    Return the PATH login(1) gives a user. This is ENV_PATH in login.defs, or
+    ENV_SUPATH for root, and the POSIX CS_PATH if neither is set.
     """
     uid = os.getuid() if uid is None else uid
     key = "ENV_SUPATH" if uid == 0 else "ENV_PATH"
@@ -26,12 +26,12 @@ def default_path(uid=None, login_defs=LOGIN_DEFS):
 def user_environment():
     """
     Return a minimal environment for the current user, built from the password
-    database and login defaults rather than from this process's environment.
+    database and login defaults and not from the environment of this process.
     """
     user = pwd.getpwuid(os.getuid())
     path = default_path(user.pw_uid).split(":")
 
-    # A user in a Flux instance has flux on PATH; keep it available to jobs.
+    # A user in a Flux instance has flux on PATH, so keep it there for jobs.
     flux = shutil.which("flux")
     if flux and os.path.dirname(flux) not in path:
         path.append(os.path.dirname(flux))

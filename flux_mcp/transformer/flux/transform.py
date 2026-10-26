@@ -6,7 +6,7 @@ from flux_mcp.validate.validate import Validator
 class FluxScript(Script):
     def __init__(self):
         self.script_lines = ["#!/bin/bash"]
-        # flux batch only reads directives written as "#FLUX:" (any case).
+        # flux batch only reads directives with a colon after FLUX, in any case.
         self.directive = "#FLUX:"
 
 

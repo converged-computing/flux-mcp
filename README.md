@@ -50,18 +50,18 @@ python3 -m flux_mcp.server.fastmcp
 
 ### Agents (stdio)
 
-`flux-mcp-stdio` runs the stdio server for agents (Claude Code, Codex, Google ADK, AWS Strands, and others) that you start inside a Flux instance you own:
+`flux-mcp-stdio` runs the stdio server for agents such as Claude Code, Codex, Google ADK and AWS Strands that you start inside a Flux instance you own.
 
 ```bash
 flux python -m venv ~/.flux-mcp/venv
 ~/.flux-mcp/venv/bin/pip install flux-mcp
-# then point your agent at:
+# then point your agent at this command
 ~/.flux-mcp/venv/bin/flux-mcp-stdio
 ```
 
 It exits with an error if `FLUX_URI` is unset (rather than falling back to the system instance). If the Flux Python bindings are not importable, it re-runs itself under `flux env`.
 
-Jobs never receive the server environment. A job gets exactly the `environment` the agent passes, or else a minimal user environment: `HOME`, `USER`, `LOGNAME` and `SHELL` from the password database, and the login `PATH` (`ENV_PATH` in `/etc/login.defs`) plus the directory containing `flux`. Commands run with `flux exec` get the same minimal environment.
+Jobs never receive the server environment. A job gets exactly the `environment` the agent passes, or else a minimal user environment. That has `HOME`, `USER`, `LOGNAME` and `SHELL` from the password database, and the login `PATH` from `ENV_PATH` in `/etc/login.defs` plus the directory containing `flux`. Commands run with `flux exec` get the same minimal environment.
 
 ### Docker
 
@@ -110,7 +110,7 @@ pytest -xs tests/test_flux_sched.py
 pytest -xs tests/test_*.py
 ```
 
-To run the whole suite the way CI does (starts the HTTP server inside a test instance):
+To run the whole suite the way CI does, with the HTTP server inside a test instance, run this.
 
 ```bash
 flux start --test-size=2 tests/run-in-flux.sh -v --ignore=tests/test_flux_sched.py tests

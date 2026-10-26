@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # Run pytest inside a Flux instance, with the HTTP server the tests connect to.
 #
-# Usage: flux start --test-size=2 tests/run-in-flux.sh [pytest args...]
-#
-# Environment:
-#   PYTHON  interpreter with flux-mcp and the test dependencies (default: python3)
+# Run it with flux start --test-size=2 tests/run-in-flux.sh and any pytest arguments.
+# PYTHON sets the interpreter with flux-mcp and the test dependencies (default python3).
 
 set -uo pipefail
 

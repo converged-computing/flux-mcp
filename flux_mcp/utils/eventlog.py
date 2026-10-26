@@ -12,7 +12,7 @@ def next_event(watcher, deadline=None, name=None):
 
 
 def fatal_exception(handle, jobid):
-    """Return the note of the job's fatal exception, or None."""
+    """Return the note of the fatal exception for a job, or None."""
     import flux.job
 
     for event in flux.job.event_watch(handle, jobid):
