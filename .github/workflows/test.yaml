@@ -20,12 +20,12 @@ jobs:
     timeout-minutes: 30
     container:
       image: fluxrm/flux-sched:noble
-      # The image user is fluxuser; setup needs root. Tests run as fluxuser below.
+      # The image user is fluxuser. Setup needs root and the tests run as fluxuser.
       options: --user root
     steps:
     - uses: actions/checkout@v4
 
-    # pip cannot upgrade Debian's python3-zipp and python3-typing-extensions.
+    # pip cannot upgrade the Debian python3-zipp and python3-typing-extensions.
     - name: Install dependencies
       run: |
         export DEBIAN_FRONTEND=noninteractive

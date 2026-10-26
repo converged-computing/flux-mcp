@@ -11,7 +11,7 @@ def fail(message):
 
 
 def ensure_flux_bindings():
-    """Re-run under `flux env` if the Flux Python bindings are not importable."""
+    """Re-run under flux env if the Flux Python bindings cannot be imported."""
     try:
         import flux  # noqa: F401
 

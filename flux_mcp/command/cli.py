@@ -23,7 +23,7 @@ def run_flux_cli(args: List[str], uri: Optional[str] = None) -> subprocess.Compl
     cmd = [shutil.which("flux") or "flux"]
 
     # flux exec passes its environment to the remote commands, so give it the
-    # user environment rather than the server's.
+    # user environment and not the server environment.
     environ = utils.user_environment()
     if uri or os.environ.get("FLUX_URI"):
         environ["FLUX_URI"] = uri or os.environ["FLUX_URI"]

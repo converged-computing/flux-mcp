@@ -102,8 +102,8 @@ def flux_submit_job(
     try:
         options = {
             "duration": duration,
-            # Use the environment the caller gives, else a minimal user environment;
-            # never the server's own environment.
+            # Use the environment the caller gives, or else a minimal user environment.
+            # Never use the server environment.
             "environment": utils.user_environment() if environment is None else environment,
             "env_expand": env_expand,
             "cwd": cwd,
@@ -250,7 +250,7 @@ def flux_get_job_logs(
         h = get_handle(uri)
         jobid = flux.job.JobID(job_id)
 
-        # As in flux.job.output.job_output: guest.output is ready after shell.init.
+        # As in flux.job.output.job_output, guest.output is ready after shell.init.
         watcher = flux.job.event_watch_async(h, jobid, "guest.exec.eventlog")
         if utils.next_event(watcher, deadline, "shell.init") is None:
             reason = utils.fatal_exception(h, jobid)

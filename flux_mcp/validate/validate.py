@@ -105,8 +105,8 @@ class Validator(BatchCmd):
 
     def update_jobspec(self, js, key, value, not_handled):
         """
-        Set the JobSpec field for one parsed flux batch option; record it in
-        not_handled if there is no equivalent field.
+        Set the JobSpec field for one parsed flux batch option. Options with no
+        matching field go in not_handled.
         """
         fields = {
             "nodes": ("num_nodes", int),

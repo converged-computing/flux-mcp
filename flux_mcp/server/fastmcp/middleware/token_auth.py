@@ -29,7 +29,7 @@ class TokenAuthMiddleware(Middleware):
         scheme, _, rest = value.partition(" ")
         if scheme.lower() == "bearer" and rest:
             return rest.strip()
-        # Also accept "Bearer:<token>", "Basic:<token>", or the bare token.
+        # Also accept Bearer or Basic followed by a colon, or the bare token.
         return re.sub(r"^(bearer|basic):", "", value, flags=re.IGNORECASE)
 
     async def __call__(self, request: Request, call_next: Callable):

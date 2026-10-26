@@ -18,7 +18,7 @@ async def test_blocking_call_does_not_stall_other_clients(client):
 
     async def quick_call():
         await asyncio.sleep(1)
-        # Time the connection too: a stalled server also stalls the handshake.
+        # Time the connection too, since a stalled server also stalls the handshake.
         start = time.monotonic()
         async with Client(SERVER) as other:
             await other.call_tool("flux_resource_list", {})
