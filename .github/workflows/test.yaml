@@ -39,3 +39,59 @@ jobs:
       run: |
         su fluxuser -c "cd '$GITHUB_WORKSPACE' && flux start --test-size=2 tests/run-in-flux.sh \
           -v --timeout=120 -p no:cacheprovider --ignore=tests/test_flux_sched.py tests"
+
+  agents:
+    name: agents (${{ matrix.agent }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: fluxrm/flux-sched:noble
+      # The image user is fluxuser. Setup needs root and the tests run as fluxuser.
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - agent: claude
+          npm: "@anthropic-ai/claude-code@2.1.296"
+        - agent: codex
+          npm: "@openai/codex@0.162.1"
+        - agent: adk
+          pip: "google-adk>=2.12"
+        - agent: strands
+          pip: "strands-agents>=1.60"
+    env:
+      # The image has no Node. The download is pinned and checked.
+      NODE_VERSION: v22.23.3
+      NODE_SHA256: df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de
+    steps:
+    - uses: actions/checkout@v4
+
+    # One install, so pip picks mcp and fastmcp versions that suit the agent too.
+    - name: Install flux-mcp and the agent packages
+      env:
+        PIP: ${{ matrix.pip }}
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends python3-venv
+        python3 -m venv /opt/venv
+        /opt/venv/bin/pip install --upgrade pip
+        /opt/venv/bin/pip install . pytest pytest-asyncio pytest-timeout ${PIP:+"$PIP"}
+
+    - name: Install Node and the agent CLI
+      if: matrix.npm
+      env:
+        NPM: ${{ matrix.npm }}
+      run: |
+        curl -fsSL -o /tmp/node.tar.xz "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz"
+        echo "$NODE_SHA256  /tmp/node.tar.xz" | sha256sum -c -
+        tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
+        npm install -g --no-fund --no-audit "$NPM"
+
+    - name: Run tests
+      env:
+        AGENT: ${{ matrix.agent }}
+      run: |
+        su fluxuser -c "cd '$GITHUB_WORKSPACE' && flux start --test-size=2 \
+          /opt/venv/bin/python -m pytest -v --timeout=600 -p no:cacheprovider agents/$AGENT"

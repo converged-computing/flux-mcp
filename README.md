@@ -50,6 +50,8 @@ python3 -m flux_mcp.server.fastmcp
 
 ### Agents (stdio)
 
+See [agents](agents) for Claude Code, Codex, Google ADK and AWS Strands, with tests for each and a devcontainer that has Flux and flux-mcp.
+
 `flux-mcp-stdio` runs the stdio server for agents such as Claude Code, Codex, Google ADK and AWS Strands that you start inside a Flux instance you own.
 
 ```bash

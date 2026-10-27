@@ -5,8 +5,6 @@ import platform
 import sys
 import threading
 
-from fastmcp.utilities.logging import get_logger
-
 
 class LogColors:
     PURPLE = "\033[95m"
@@ -75,7 +73,8 @@ class ColorizingStreamHandler(_logging.StreamHandler):
 
 class Logger:
     def __init__(self):
-        self.logger = get_logger(__name__)
+        # Same name fastmcp's get_logger would give, without importing fastmcp internals.
+        self.logger = _logging.getLogger(f"fastmcp.{__name__}")
         self.log_handler = [self.text_handler]
         self.stream_handler = None
         self.printshellcmds = False

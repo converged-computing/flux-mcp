@@ -1,6 +1,7 @@
 flux_mcp.egg-info
 build
 dist
+.adk
 env
 .eggs
 __pycache__
