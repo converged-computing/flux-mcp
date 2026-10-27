@@ -1,0 +1,28 @@
+{
+  "name": "Flux with Claude Developer Environment",
+  "dockerFile": "Dockerfile",
+  "context": "../../",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+  },
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
+        "anthropic.claude-code"
+      ]
+    }
+  },
+  "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand",
+  "runArgs": [
+    "--cap-add=NET_ADMIN"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Flux MCP agents",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "../.."
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "FLUX_URI": "local:///tmp/flux-agents/local",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  },
+  "runArgs": [
+    "--cap-add=NET_ADMIN"
+  ],
+  "postCreateCommand": "/opt/flux-mcp/bin/pip install --no-deps --no-build-isolation -e ${containerWorkspaceFolder}",
+  "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && /usr/local/bin/start-flux.sh && sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "anthropic.claude-code"
+      ]
+    }
+  }
+}
